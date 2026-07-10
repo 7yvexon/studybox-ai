@@ -27,6 +27,7 @@
 
 ```text
 studybox-ai/
+├─ StudyBox AI 실행.bat # Windows 원클릭 실행 파일
 ├─ index.html       # 랜딩페이지의 시맨틱 구조
 ├─ css/
 │  └─ style.css     # 디자인 토큰, 레이아웃, 반응형·접근성 스타일
@@ -40,10 +41,14 @@ studybox-ai/
 
 ## 실행 방법
 
-별도 설치나 빌드 과정이 없는 정적 웹사이트입니다. `index.html`을 브라우저에서 바로 열거나, Python이 설치된 환경에서 간단한 정적 서버를 실행합니다.
+별도 설치나 빌드 과정이 없는 정적 웹사이트입니다. Windows에서는 프로젝트 루트의 `StudyBox AI 실행.bat` 파일을 더블클릭하면 로컬 서버가 시작되고 기본 브라우저에서 사이트가 열립니다. 서버를 종료하려면 실행 창에서 `Ctrl+C`를 누르세요.
+
+Python 3가 설치되어 있어야 하며, 8000번 포트가 이미 사용 중이면 해당 프로그램을 종료한 뒤 다시 실행하세요.
+
+배치 파일을 사용하지 않는 경우에는 아래처럼 수동으로 실행할 수 있습니다.
 
 ```powershell
-cd C:\codex\studybox-ai
+cd C:\Users\User\Documents\Code\studybox-gited\repos\studybox-ai
 python -m http.server 8000
 ```
 
