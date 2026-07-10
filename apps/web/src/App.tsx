@@ -32,6 +32,105 @@ const settingsLabels = {
   responseLength: { short: "짧게", standard: "보통", detailed: "자세히" }
 } as const;
 
+const learningStories = [
+  {
+    mode: "concept",
+    code: "01 / 개념 설명",
+    title: "모르는 걸\n아는 말로.",
+    description: "낯선 개념도 쉬운 표현과 익숙한 예시부터 시작합니다."
+  },
+  {
+    mode: "solve",
+    code: "02 / 문제 풀이",
+    title: "답보다 먼저\n보이는 과정.",
+    description: "조건, 공식, 풀이 순서를 연결해 다음 문제까지 풀 수 있게 합니다."
+  },
+  {
+    mode: "summary",
+    code: "03 / 핵심 요약",
+    title: "길게 읽지 않아도\n남는 핵심.",
+    description: "중요한 정보와 키워드만 남겨 복습의 밀도를 높입니다."
+  },
+  {
+    mode: "exam",
+    code: "04 / 시험 대비",
+    title: "시험 직전,\n봐야 할 것만.",
+    description: "암기 포인트부터 예상 문제와 오답까지 한 흐름으로 정리합니다."
+  },
+  {
+    mode: "performance",
+    code: "05 / 수행평가",
+    title: "막막한 시작을\n선명한 개요로.",
+    description: "수행 조건을 읽고 주제, 근거, 구성, 평가 기준을 함께 설계합니다."
+  }
+] satisfies Array<{
+  mode: LearningMode;
+  code: string;
+  title: string;
+  description: string;
+}>;
+
+const previewResponses: Record<
+  LearningMode,
+  {
+    question: string;
+    title: string;
+    summary: string;
+    sections: Array<{ title: string; content: string }>;
+  }
+> = {
+  concept: {
+    question: "광합성 과정을 쉽게 설명해 줘",
+    title: "빛을 에너지로 바꾸는 식물의 과정",
+    summary: "광합성은 식물이 햇빛을 이용해 스스로 먹을 것을 만드는 과정이에요.",
+    sections: [
+      { title: "준비물", content: "햇빛, 물, 이산화탄소가 필요해요." },
+      { title: "일어나는 일", content: "잎의 엽록체가 빛을 받아 포도당과 산소를 만들어요." },
+      { title: "한 줄 정리", content: "식물은 빛 에너지를 저장 가능한 화학 에너지로 바꿔요." }
+    ]
+  },
+  solve: {
+    question: "이차방정식 x²-5x+6=0을 풀어 줘",
+    title: "곱해서 6, 더해서 -5가 되는 수 찾기",
+    summary: "식을 인수분해하면 해를 빠르고 정확하게 확인할 수 있어요.",
+    sections: [
+      { title: "조건 확인", content: "상수항은 6이고 일차항의 계수는 -5예요." },
+      { title: "단계별 풀이", content: "(x-2)(x-3)=0으로 인수분해해요." },
+      { title: "정답 점검", content: "따라서 x=2 또는 x=3이에요." }
+    ]
+  },
+  summary: {
+    question: "조선 후기 경제 변화를 핵심만 요약해 줘",
+    title: "상품 화폐 경제가 빠르게 성장했어요",
+    summary: "농업 생산력과 시장이 성장하면서 상업과 수공업의 모습도 달라졌어요.",
+    sections: [
+      { title: "농업", content: "모내기법이 널리 퍼지고 상품 작물 재배가 늘었어요." },
+      { title: "상업", content: "장시와 포구가 성장하고 사상인의 활동이 활발해졌어요." },
+      { title: "핵심 키워드", content: "광작, 장시, 사상, 상품 화폐 경제를 기억하세요." }
+    ]
+  },
+  exam: {
+    question: "중간고사 전에 세포 분열을 정리해 줘",
+    title: "체세포 분열과 감수 분열을 구분해요",
+    summary: "시험에서는 분열 횟수, 만들어지는 세포 수, 염색체 수를 비교하는 문제가 자주 나와요.",
+    sections: [
+      { title: "암기 포인트", content: "체세포 분열은 1회, 감수 분열은 연속 2회 진행돼요." },
+      { title: "자주 틀리는 부분", content: "감수 분열 결과의 염색체 수는 모세포의 절반이에요." },
+      { title: "예상 문제", content: "두 분열의 결과 세포 수와 유전적 차이를 비교해 보세요." }
+    ]
+  },
+  performance: {
+    question: "플라스틱 사용을 주제로 발표 개요를 만들어 줘",
+    title: "문제 제기부터 실천 제안까지 연결해요",
+    summary: "자료를 나열하기보다 원인, 영향, 해결책이 이어지는 구조가 설득력을 높여요.",
+    sections: [
+      { title: "도입", content: "일상에서 버려지는 플라스틱의 규모를 짧은 사례로 보여줘요." },
+      { title: "본론", content: "환경 영향과 개인·학교·기업의 해결책을 근거와 함께 제시해요." },
+      { title: "마무리", content: "청중이 오늘부터 실천할 수 있는 행동을 한 가지 제안해요." }
+    ]
+  }
+};
+
 const pendingQuestionKey = "studybox-pending-question";
 
 const getErrorMessage = (error: unknown) =>
@@ -39,18 +138,18 @@ const getErrorMessage = (error: unknown) =>
 
 const LoadingPage = () => <main className="loading-page">불러오는 중입니다.</main>;
 
-const SiteHeader = () => {
+const SiteHeader = ({ tone = "dark" }: { tone?: "dark" | "light" }) => {
   const { user, loading } = useAuth();
 
   return (
-    <header className="site-header">
+    <header className={`site-header site-header--${tone}`}>
       <div className="site-header__inner container">
         <Link className="brand-link" to="/" aria-label="StudyBox AI 처음으로 이동">
           StudyBox <span>AI</span>
         </Link>
         <nav className="primary-navigation" aria-label="주요 메뉴">
           <a href="/#story">학습 모드</a>
-          <a href="/#categories">주요 기능</a>
+          <a href="/#categories">AI 미리보기</a>
           <a href="/#how-it-works">사용 방법</a>
         </nav>
         {!loading && (
@@ -64,24 +163,142 @@ const SiteHeader = () => {
 };
 
 const Footer = () => (
-  <footer className="site-footer">
+  <footer className="site-footer site-footer--light">
     <div className="site-footer__inner container">
       <div>
         <Link className="brand-link" to="/">
           StudyBox <span>AI</span>
         </Link>
-        <p>One question. Your way to learn.</p>
+        <p>질문은 하나, 공부는 내 방식대로.</p>
       </div>
       <p>StudyBox AI Beta · {new Date().getFullYear()}</p>
     </div>
   </footer>
 );
 
+const LearningPreview = ({
+  mode,
+  onModeChange,
+  compact = false
+}: {
+  mode: LearningMode;
+  onModeChange: (mode: LearningMode) => void;
+  compact?: boolean;
+}) => {
+  const response = previewResponses[mode];
+
+  return (
+    <div
+      className={`product-preview${compact ? " product-preview--compact" : ""}`}
+      role={compact ? undefined : "group"}
+      aria-label={compact ? undefined : "학습 답변 미리보기"}
+      aria-hidden={compact ? true : undefined}
+    >
+      <div className="product-preview__chrome" aria-hidden="true">
+        <span>StudyBox AI</span>
+        <span>학습 미리보기</span>
+      </div>
+      <div className="product-preview__layout">
+        <div className="product-preview__settings">
+          <p>학습 모드</p>
+          <div className="product-preview__modes" aria-label="미리보기 학습 모드">
+            {(Object.entries(settingsLabels.mode) as Array<[LearningMode, string]>).map(([value, label]) => (
+              <button
+                className={value === mode ? "is-active" : ""}
+                type="button"
+                aria-pressed={value === mode}
+                disabled={compact}
+                tabIndex={compact ? -1 : undefined}
+                onClick={() => onModeChange(value)}
+                key={value}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="product-preview__question">
+            <span>나의 질문</span>
+            <p>{response.question}</p>
+          </div>
+        </div>
+        <article className="product-preview__answer" aria-live="polite">
+          <p className="product-preview__eyebrow">
+            {settingsLabels.mode[mode]} · 보통 · 보통 길이
+          </p>
+          <h3>{response.title}</h3>
+          <p className="product-preview__summary">{response.summary}</p>
+          <div className="product-preview__sections">
+            {response.sections.map((section) => (
+              <section key={section.title}>
+                <h4>{section.title}</h4>
+                <p>{section.content}</p>
+              </section>
+            ))}
+          </div>
+        </article>
+      </div>
+    </div>
+  );
+};
+
 const LandingPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [question, setQuestion] = useState("");
   const [settings, setSettings] = useState<LearningSettings>(defaultLearningSettings);
+  const [storyIndex, setStoryIndex] = useState(0);
+  const [storyEnhanced, setStoryEnhanced] = useState(false);
+  const [lightHeader, setLightHeader] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotion = () => setStoryEnhanced(!media.matches && "IntersectionObserver" in window);
+
+    updateMotion();
+    media.addEventListener("change", updateMotion);
+    return () => media.removeEventListener("change", updateMotion);
+  }, []);
+
+  useEffect(() => {
+    if (!storyEnhanced) {
+      return;
+    }
+
+    const steps = Array.from(document.querySelectorAll<HTMLElement>("[data-story-step]"));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const activeEntry = entries.find((entry) => entry.isIntersecting);
+        if (activeEntry) {
+          setStoryIndex(Number((activeEntry.target as HTMLElement).dataset.storyStep || 0));
+        }
+      },
+      { rootMargin: "-46% 0px -46% 0px", threshold: 0 }
+    );
+
+    steps.forEach((step) => observer.observe(step));
+    return () => observer.disconnect();
+  }, [storyEnhanced]);
+
+  useEffect(() => {
+    let animationFrame = 0;
+
+    const updateHeaderTone = () => {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(() => {
+        const lightSection = document.getElementById("categories");
+        if (lightSection) {
+          setLightHeader(window.scrollY >= lightSection.offsetTop - 52);
+        }
+      });
+    };
+
+    updateHeaderTone();
+    window.addEventListener("scroll", updateHeaderTone, { passive: true });
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener("scroll", updateHeaderTone);
+    };
+  }, []);
 
   const startLearning = (event?: FormEvent) => {
     event?.preventDefault();
@@ -99,17 +316,14 @@ const LandingPage = () => {
     navigate(user ? destination : `/login?next=${encodeURIComponent(destination)}`);
   };
 
-  const chooseMode = (mode: LearningMode) => {
-    setSettings((current) => ({ ...current, mode }));
-    document.getElementById("learning-app")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  const selectMode = (mode: LearningMode) => setSettings((current) => ({ ...current, mode }));
 
   return (
     <>
       <a className="skip-link" href="#main-content">
         본문으로 건너뛰기
       </a>
-      <SiteHeader />
+      <SiteHeader tone={lightHeader ? "light" : "dark"} />
       <main id="main-content" tabIndex={-1}>
         <section id="hero" className="hero" aria-labelledby="hero-title">
           <div className="hero__inner container">
@@ -128,91 +342,68 @@ const LandingPage = () => {
                   학습 시작하기
                 </button>
                 <a className="text-link" href="#story">
-                  어떻게 다른지 보기 <span aria-hidden="true">↘</span>
+                  어떻게 다른지 보기
                 </a>
               </div>
             </div>
-            <a className="scroll-cue" href="#story">
-              <span aria-hidden="true" />
-              Scroll to explore
-            </a>
+            <div className="hero__preview">
+              <LearningPreview mode={settings.mode} onModeChange={selectMode} compact />
+            </div>
+            <a className="scroll-cue" href="#story">아래로 스크롤</a>
           </div>
         </section>
 
-        <section id="story" className="story-section" aria-labelledby="story-title">
+        <section id="story" className={`story-section${storyEnhanced ? " is-enhanced" : ""}`} aria-labelledby="story-title">
           <h2 id="story-title" className="visually-hidden">
             StudyBox AI의 다섯 가지 학습 모드
           </h2>
           <div className="story-sticky">
             <div className="story-frame container">
               <header className="story-topline">
-                <p>ONE AI · FIVE MODES</p>
+                <p>하나의 AI · 다섯 학습 모드</p>
                 <p>목적에 맞는 답변</p>
               </header>
               <div className="story-panels">
-                <article className="story-panel">
-                  <p className="story-panel__meta">01 / CONCEPT</p>
-                  <h3>모르는 걸<br /><strong>아는 말로.</strong></h3>
-                  <p>낯선 개념도 쉬운 표현과 익숙한 예시부터 시작합니다.</p>
-                </article>
-                <article className="story-panel">
-                  <p className="story-panel__meta">02 / SOLVE</p>
-                  <h3>답보다 먼저<br /><strong>보이는 과정.</strong></h3>
-                  <p>조건, 공식, 풀이 순서를 연결해 다음 문제까지 풀 수 있게 합니다.</p>
-                </article>
-                <article className="story-panel">
-                  <p className="story-panel__meta">03 / SUMMARY</p>
-                  <h3>길게 읽지 않아도<br /><strong>남는 핵심.</strong></h3>
-                  <p>중요한 정보와 키워드만 남겨 복습의 밀도를 높입니다.</p>
-                </article>
-                <article className="story-panel">
-                  <p className="story-panel__meta">04 / EXAM</p>
-                  <h3>시험 직전,<br /><strong>봐야 할 것만.</strong></h3>
-                  <p>암기 포인트부터 예상 문제와 오답까지 한 흐름으로 정리합니다.</p>
-                </article>
-                <article className="story-panel">
-                  <p className="story-panel__meta">05 / PROJECT</p>
-                  <h3>막막한 시작을<br /><strong>선명한 개요로.</strong></h3>
-                  <p>수행 조건을 읽고 주제, 근거, 구성, 평가 기준을 함께 설계합니다.</p>
-                </article>
+                {learningStories.map((story, index) => {
+                  const [firstLine, secondLine] = story.title.split("\n");
+                  return (
+                    <article
+                      className={`story-panel${index === storyIndex ? " is-active" : ""}${index < storyIndex ? " is-past" : ""}`}
+                      key={story.mode}
+                    >
+                      <p className="story-panel__meta">{story.code}</p>
+                      <h3>{firstLine}<br /><strong>{secondLine}</strong></h3>
+                      <p>{story.description}</p>
+                    </article>
+                  );
+                })}
+              </div>
+              <div className="story-progress" aria-hidden="true">
+                <div className="story-progress__rail"><span style={{ transform: `scaleX(${(storyIndex + 1) / learningStories.length})` }} /></div>
+                <p>{String(storyIndex + 1).padStart(2, "0")} <span>/ 05</span></p>
               </div>
             </div>
           </div>
+          <div className="story-steps" aria-hidden="true">
+            {learningStories.map((story, index) => <span data-story-step={index} key={story.mode} />)}
+          </div>
         </section>
 
-        <section id="categories" className="section categories-section" aria-labelledby="categories-title">
+        <section id="categories" className="section product-section" aria-labelledby="categories-title">
           <div className="container">
             <header className="section-heading">
-              <p className="section-eyebrow">BUILT FOR STUDY</p>
-              <h2 id="categories-title">다섯 개의 모드.<br />필요한 순간에 바로.</h2>
-              <p>선택 한 번으로 답변의 순서, 깊이, 표현 방식이 바뀝니다.</p>
+              <p className="section-eyebrow">실제 답변 미리보기</p>
+              <h2 id="categories-title">같은 AI가 아니라.<br />내 목적에 맞는 AI.</h2>
+              <p>학습 모드를 눌러 같은 질문이 어떤 구조와 깊이의 답변으로 바뀌는지 확인해 보세요.</p>
             </header>
-            <ol className="category-list">
-              {(
-                [
-                  ["concept", "개념 설명", "쉬운 표현 · 예시와 비유 · 핵심 용어 · 한 줄 정리"],
-                  ["solve", "문제 풀이", "조건 분석 · 필요한 공식 · 단계별 풀이 · 실수 점검"],
-                  ["summary", "핵심 요약", "중요 정보 · 핵심 키워드 · 내용 구조 · 빠른 복습"],
-                  ["exam", "시험 대비", "암기 포인트 · 예상 문제 · 정답과 해설 · 오답 확인"],
-                  ["performance", "수행평가", "조건 분석 · 주제 추천 · 개요 작성 · 기준 점검"]
-                ] as Array<[LearningMode, string, string]>
-              ).map(([mode, title, description], index) => (
-                <li className="category-item" key={mode}>
-                  <button className="category-item__button" type="button" onClick={() => chooseMode(mode)}>
-                    <span className="category-item__number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-                    <span className="category-item__title">{title}</span>
-                    <span className="category-item__description">{description}</span>
-                  </button>
-                </li>
-              ))}
-            </ol>
+            <LearningPreview mode={settings.mode} onModeChange={selectMode} />
           </div>
         </section>
 
         <section id="how-it-works" className="section process-section" aria-labelledby="how-it-works-title">
           <div className="container">
             <header className="section-heading">
-              <p className="section-eyebrow">LESS SETUP · MORE FOCUS</p>
+              <p className="section-eyebrow">설정은 짧게 · 집중은 길게</p>
               <h2 id="how-it-works-title">설정은 짧게.<br />집중은 바로.</h2>
             </header>
             <ol className="process-list">
@@ -234,7 +425,7 @@ const LandingPage = () => {
           <div className="container">
             <div className="learning-app__content">
               <header className="learning-app__header">
-                <p className="section-eyebrow">STUDY YOUR WAY</p>
+                <p className="section-eyebrow">내 방식대로 공부하기</p>
                 <h2 id="learning-app-title">질문은 그대로.<br /><span>답변은 내 방식대로.</span></h2>
                 <p>초대 코드 베타 서비스입니다. 로그인 후 내 대화에 안전하게 저장됩니다.</p>
               </header>
@@ -317,7 +508,7 @@ const SettingsFields = ({
 
 const AuthFrame = ({ children }: { children: ReactNode }) => (
   <>
-    <SiteHeader />
+    <SiteHeader tone="light" />
     <main className="auth-page">{children}</main>
   </>
 );
@@ -566,6 +757,7 @@ const ChatPage = () => {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const refreshList = async () => {
     const result = await api.listConversations();
@@ -683,8 +875,18 @@ const ChatPage = () => {
       <AppHeader />
       <main id="chat-main" className="chat-app chat-app--react" tabIndex={-1}>
         <div className="chat-app__layout chat-shell">
-          <aside className="chat-settings" aria-labelledby="chat-settings-title">
-            <div className="chat-settings__content">
+          <aside className={`chat-settings${settingsOpen ? " is-open" : ""}`} aria-labelledby="chat-settings-title">
+            <button
+              className="chat-settings__toggle"
+              type="button"
+              aria-expanded={settingsOpen}
+              aria-controls="chat-settings-content"
+              onClick={() => setSettingsOpen((current) => !current)}
+            >
+              <span>학습 설정</span>
+              <span>{settingsOpen ? "닫기" : "열기"}</span>
+            </button>
+            <div className="chat-settings__content" id="chat-settings-content">
               <div className="chat-settings__header">
                 <div>
                   <p className="chat-settings__eyebrow">STUDY SETTINGS</p>
@@ -733,7 +935,7 @@ const ChatPage = () => {
                 <textarea id="chat-question" rows={2} maxLength={2000} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="궁금한 내용을 이어서 질문해 보세요" disabled={sending} />
                 <div className="chat-composer__footer">
                   <p>최대 2,000자까지 입력할 수 있습니다.</p>
-                  <button className="chat-send-button" type="submit" disabled={sending || !question.trim()}>{sending ? "답변 준비 중..." : <>보내기 <span aria-hidden="true">↑</span></>}</button>
+                  <button className="chat-send-button" type="submit" disabled={sending || !question.trim()}>{sending ? "답변 준비 중..." : "보내기"}</button>
                 </div>
                 {error && <p className="chat-composer__error" role="alert">{error}</p>}
               </div>
