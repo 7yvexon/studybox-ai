@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
@@ -35,6 +35,34 @@ const conversation = {
   createdAt: "2026-07-10T00:00:00.000Z",
   updatedAt: "2026-07-10T00:00:00.000Z",
   lastMessagePreview: null
+};
+
+const userMessage = {
+  id: "message-user-1",
+  conversationId: conversation.id,
+  role: "user" as const,
+  content: "이차방정식 풀이 과정을 알려줘",
+  settings: conversation.settings,
+  response: null,
+  provider: null,
+  model: null,
+  createdAt: "2026-07-10T00:01:00.000Z"
+};
+
+const assistantMessage = {
+  id: "message-assistant-1",
+  conversationId: conversation.id,
+  role: "assistant" as const,
+  content: "인수분해로 풀이합니다.",
+  settings: conversation.settings,
+  response: {
+    title: "인수분해로 차근차근 풀어요",
+    summary: "곱해서 6, 더해서 -5가 되는 두 수를 찾습니다.",
+    sections: [{ title: "풀이", content: "(x-2)(x-3)=0으로 정리합니다." }]
+  },
+  provider: "mock",
+  model: "mock-studybox-v1",
+  createdAt: "2026-07-10T00:01:01.000Z"
 };
 
 const authenticatedFetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -88,18 +116,93 @@ afterEach(() => {
 });
 
 describe("StudyBox web experience", () => {
-  it("connects the selected preview mode to the final learning settings", async () => {
+  it("switches learning agents and fills the composer from an example", async () => {
     vi.stubGlobal("fetch", unauthenticatedFetch);
     renderAt("/");
 
-    const preview = screen.getByRole("group", { name: "학습 답변 미리보기" });
-    fireEvent.click(within(preview).getByRole("button", { name: "문제 풀이" }));
+    await screen.findByRole("heading", { name: "공부할 일을 맡겨보세요." });
+    const solveAgent = screen.getByRole("button", { name: /풀이 코치/ });
+    const summaryAgent = screen.getByRole("button", { name: /요약 코치/ });
 
-    expect(within(preview).getByRole("heading", { name: "곱해서 6, 더해서 -5가 되는 수 찾기" })).toBeTruthy();
-    expect((screen.getByRole("radio", { name: "문제 풀이" }) as HTMLInputElement).checked).toBe(true);
+    expect(solveAgent.getAttribute("aria-pressed")).toBe("true");
+    expect(summaryAgent.getAttribute("aria-pressed")).toBe("false");
 
-    fireEvent.click(screen.getByRole("button", { name: "초기화" }));
-    expect((screen.getByRole("radio", { name: "개념 설명" }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(summaryAgent);
+
+    expect(summaryAgent.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText("선택한 요약 코치가 최적의 방식으로 도와줄게요.")).toBeTruthy();
+
+    const example = screen.getByRole("button", { name: /조선 후기 경제 변화를 핵심만 요약해 줘/ });
+    fireEvent.click(example);
+
+    expect((screen.getByRole("textbox", { name: "문제나 궁금한 내용" }) as HTMLTextAreaElement).value)
+      .toBe("조선 후기 경제 변화를 핵심만 요약해 줘");
+  });
+
+  it("keeps keyboard input behavior and carries a trimmed question into login", async () => {
+    vi.stubGlobal("fetch", unauthenticatedFetch);
+    renderAt("/");
+
+    const question = await screen.findByRole("textbox", { name: "문제나 궁금한 내용" }) as HTMLTextAreaElement;
+    const submit = screen.getByRole("button", { name: "시작하기" }) as HTMLButtonElement;
+
+    expect(submit.disabled).toBe(true);
+    fireEvent.change(question, { target: { value: "  이차방정식 풀이 과정을 알려줘  " } });
+    expect(submit.disabled).toBe(false);
+
+    fireEvent.keyDown(question, { key: "Enter", shiftKey: true });
+    expect(window.sessionStorage.getItem("studybox-pending-question")).toBeNull();
+
+    fireEvent.keyDown(question, { key: "Enter", isComposing: true });
+    expect(window.sessionStorage.getItem("studybox-pending-question")).toBeNull();
+
+    fireEvent.keyDown(question, { key: "Enter" });
+
+    expect(window.sessionStorage.getItem("studybox-pending-question"))
+      .toBe("이차방정식 풀이 과정을 알려줘");
+    expect(await screen.findByRole("heading", { name: "다시 만나서 반가워요." })).toBeTruthy();
+  });
+
+  it("automatically sends a pending question exactly once", async () => {
+    window.sessionStorage.setItem("studybox-pending-question", userMessage.content);
+    const automaticFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === `/api/conversations/${conversation.id}/messages` && init?.method === "POST") {
+        return response(200, { userMessage, assistantMessage, usageLimit: 49 });
+      }
+
+      return authenticatedFetch(input);
+    });
+    vi.stubGlobal("fetch", automaticFetch);
+
+    renderAt(`/app/${conversation.id}`);
+
+    expect(await screen.findByRole("heading", { name: "인수분해로 차근차근 풀어요" })).toBeTruthy();
+    expect(window.sessionStorage.getItem("studybox-pending-question")).toBeNull();
+    expect(automaticFetch.mock.calls.filter(([input]) => String(input).endsWith("/messages"))).toHaveLength(1);
+    expect((screen.getByRole("textbox", { name: "추가 질문" }) as HTMLTextAreaElement).value).toBe("");
+  });
+
+  it("restores a pending question when automatic sending fails", async () => {
+    window.sessionStorage.setItem("studybox-pending-question", userMessage.content);
+    const failedFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === `/api/conversations/${conversation.id}/messages` && init?.method === "POST") {
+        return response(500, { error: { code: "AI_FAILED", message: "답변을 준비하지 못했습니다." } });
+      }
+
+      return authenticatedFetch(input);
+    });
+    vi.stubGlobal("fetch", failedFetch);
+
+    renderAt(`/app/${conversation.id}`);
+
+    expect((await screen.findByRole("alert")).textContent).toContain("답변을 준비하지 못했습니다.");
+    expect((screen.getByRole("textbox", { name: "추가 질문" }) as HTMLTextAreaElement).value)
+      .toBe(userMessage.content);
+    expect(window.sessionStorage.getItem("studybox-pending-question")).toBeNull();
   });
 
   it("keeps login input behavior and validation attributes", async () => {

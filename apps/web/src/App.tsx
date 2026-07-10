@@ -1,4 +1,22 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode
+} from "react";
+import type { Icon } from "@phosphor-icons/react";
+import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
+import { BookOpenIcon } from "@phosphor-icons/react/dist/csr/BookOpen";
+import { CalculatorIcon } from "@phosphor-icons/react/dist/csr/Calculator";
+import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
+import { InfoIcon } from "@phosphor-icons/react/dist/csr/Info";
+import { NotepadIcon } from "@phosphor-icons/react/dist/csr/Notepad";
+import { PaperPlaneTiltIcon } from "@phosphor-icons/react/dist/csr/PaperPlaneTilt";
+import { PencilLineIcon } from "@phosphor-icons/react/dist/csr/PencilLine";
+import { SlidersHorizontalIcon } from "@phosphor-icons/react/dist/csr/SlidersHorizontal";
+import { TargetIcon } from "@phosphor-icons/react/dist/csr/Target";
 import {
   Link,
   Navigate,
@@ -32,103 +50,75 @@ const settingsLabels = {
   responseLength: { short: "짧게", standard: "보통", detailed: "자세히" }
 } as const;
 
-const learningStories = [
+interface LearningAgentDefinition {
+  mode: LearningMode;
+  label: string;
+  description: string;
+  icon: Icon;
+  examples: readonly [string, string, string];
+}
+
+const learningAgents = [
   {
     mode: "concept",
-    code: "01 / 개념 설명",
-    title: "모르는 걸\n아는 말로.",
-    description: "낯선 개념도 쉬운 표현과 익숙한 예시부터 시작합니다."
+    label: "개념 코치",
+    description: "개념 이해 · 원리 설명",
+    icon: BookOpenIcon,
+    examples: [
+      "광합성 과정을 쉽게 설명해 줘",
+      "중학생 눈높이로 핵심 원리를 알려줘",
+      "일상 비유로 다시 설명해 줘"
+    ]
   },
   {
     mode: "solve",
-    code: "02 / 문제 풀이",
-    title: "답보다 먼저\n보이는 과정.",
-    description: "조건, 공식, 풀이 순서를 연결해 다음 문제까지 풀 수 있게 합니다."
+    label: "풀이 코치",
+    description: "문제 풀이 · 단계별 해설",
+    icon: CalculatorIcon,
+    examples: [
+      "이차방정식 풀이 과정을 알려줘",
+      "이 문제에서 먼저 찾아야 할 조건은?",
+      "틀린 풀이를 단계별로 고쳐줘"
+    ]
   },
   {
     mode: "summary",
-    code: "03 / 핵심 요약",
-    title: "길게 읽지 않아도\n남는 핵심.",
-    description: "중요한 정보와 키워드만 남겨 복습의 밀도를 높입니다."
+    label: "요약 코치",
+    description: "핵심 요약 · 정리",
+    icon: NotepadIcon,
+    examples: [
+      "조선 후기 경제 변화를 핵심만 요약해 줘",
+      "이 내용을 시험 전 5줄로 줄여 줘",
+      "꼭 외울 키워드만 정리해 줘"
+    ]
   },
   {
     mode: "exam",
-    code: "04 / 시험 대비",
-    title: "시험 직전,\n봐야 할 것만.",
-    description: "암기 포인트부터 예상 문제와 오답까지 한 흐름으로 정리합니다."
+    label: "시험 코치",
+    description: "시험 대비 · 문제 연습",
+    icon: TargetIcon,
+    examples: [
+      "세포 분열 시험 포인트를 정리해 줘",
+      "예상 문제 3개를 만들어 줘",
+      "자주 틀리는 부분을 퀴즈로 내 줘"
+    ]
   },
   {
     mode: "performance",
-    code: "05 / 수행평가",
-    title: "막막한 시작을\n선명한 개요로.",
-    description: "수행 조건을 읽고 주제, 근거, 구성, 평가 기준을 함께 설계합니다."
+    label: "수행평가 코치",
+    description: "보고서 · 발표 · 프로젝트",
+    icon: PencilLineIcon,
+    examples: [
+      "플라스틱 사용을 주제로 발표 개요를 만들어 줘",
+      "평가 기준에 맞춰 구성을 점검해 줘",
+      "발표 근거와 출처 찾는 순서를 알려 줘"
+    ]
   }
-] satisfies Array<{
-  mode: LearningMode;
-  code: string;
-  title: string;
-  description: string;
-}>;
+] satisfies LearningAgentDefinition[];
 
-const previewResponses: Record<
-  LearningMode,
-  {
-    question: string;
-    title: string;
-    summary: string;
-    sections: Array<{ title: string; content: string }>;
-  }
-> = {
-  concept: {
-    question: "광합성 과정을 쉽게 설명해 줘",
-    title: "빛을 에너지로 바꾸는 식물의 과정",
-    summary: "광합성은 식물이 햇빛을 이용해 스스로 먹을 것을 만드는 과정이에요.",
-    sections: [
-      { title: "준비물", content: "햇빛, 물, 이산화탄소가 필요해요." },
-      { title: "일어나는 일", content: "잎의 엽록체가 빛을 받아 포도당과 산소를 만들어요." },
-      { title: "한 줄 정리", content: "식물은 빛 에너지를 저장 가능한 화학 에너지로 바꿔요." }
-    ]
-  },
-  solve: {
-    question: "이차방정식 x²-5x+6=0을 풀어 줘",
-    title: "곱해서 6, 더해서 -5가 되는 수 찾기",
-    summary: "식을 인수분해하면 해를 빠르고 정확하게 확인할 수 있어요.",
-    sections: [
-      { title: "조건 확인", content: "상수항은 6이고 일차항의 계수는 -5예요." },
-      { title: "단계별 풀이", content: "(x-2)(x-3)=0으로 인수분해해요." },
-      { title: "정답 점검", content: "따라서 x=2 또는 x=3이에요." }
-    ]
-  },
-  summary: {
-    question: "조선 후기 경제 변화를 핵심만 요약해 줘",
-    title: "상품 화폐 경제가 빠르게 성장했어요",
-    summary: "농업 생산력과 시장이 성장하면서 상업과 수공업의 모습도 달라졌어요.",
-    sections: [
-      { title: "농업", content: "모내기법이 널리 퍼지고 상품 작물 재배가 늘었어요." },
-      { title: "상업", content: "장시와 포구가 성장하고 사상인의 활동이 활발해졌어요." },
-      { title: "핵심 키워드", content: "광작, 장시, 사상, 상품 화폐 경제를 기억하세요." }
-    ]
-  },
-  exam: {
-    question: "중간고사 전에 세포 분열을 정리해 줘",
-    title: "체세포 분열과 감수 분열을 구분해요",
-    summary: "시험에서는 분열 횟수, 만들어지는 세포 수, 염색체 수를 비교하는 문제가 자주 나와요.",
-    sections: [
-      { title: "암기 포인트", content: "체세포 분열은 1회, 감수 분열은 연속 2회 진행돼요." },
-      { title: "자주 틀리는 부분", content: "감수 분열 결과의 염색체 수는 모세포의 절반이에요." },
-      { title: "예상 문제", content: "두 분열의 결과 세포 수와 유전적 차이를 비교해 보세요." }
-    ]
-  },
-  performance: {
-    question: "플라스틱 사용을 주제로 발표 개요를 만들어 줘",
-    title: "문제 제기부터 실천 제안까지 연결해요",
-    summary: "자료를 나열하기보다 원인, 영향, 해결책이 이어지는 구조가 설득력을 높여요.",
-    sections: [
-      { title: "도입", content: "일상에서 버려지는 플라스틱의 규모를 짧은 사례로 보여줘요." },
-      { title: "본론", content: "환경 영향과 개인·학교·기업의 해결책을 근거와 함께 제시해요." },
-      { title: "마무리", content: "청중이 오늘부터 실천할 수 있는 행동을 한 가지 제안해요." }
-    ]
-  }
+const defaultLandingSettings: LearningSettings = {
+  ...defaultLearningSettings,
+  mode: "solve"
 };
 
 const pendingQuestionKey = "studybox-pending-question";
@@ -147,14 +137,9 @@ const SiteHeader = ({ tone = "dark" }: { tone?: "dark" | "light" }) => {
         <Link className="brand-link" to="/" aria-label="StudyBox AI 처음으로 이동">
           StudyBox <span>AI</span>
         </Link>
-        <nav className="primary-navigation" aria-label="주요 메뉴">
-          <a href="/#story">학습 모드</a>
-          <a href="/#categories">AI 미리보기</a>
-          <a href="/#how-it-works">사용 방법</a>
-        </nav>
         {!loading && (
-          <Link className="header-start" to={user ? "/app/new" : "/login?next=/app/new"}>
-            {user ? "학습 시작" : "로그인"}
+          <Link className="header-start" to={user ? "/account" : "/login"}>
+            {user ? "계정" : "로그인"}
           </Link>
         )}
       </div>
@@ -162,146 +147,25 @@ const SiteHeader = ({ tone = "dark" }: { tone?: "dark" | "light" }) => {
   );
 };
 
-const Footer = () => (
-  <footer className="site-footer site-footer--light">
-    <div className="site-footer__inner container">
-      <div>
-        <Link className="brand-link" to="/">
-          StudyBox <span>AI</span>
-        </Link>
-        <p>질문은 하나, 공부는 내 방식대로.</p>
-      </div>
-      <p>StudyBox AI Beta · {new Date().getFullYear()}</p>
-    </div>
-  </footer>
-);
-
-const LearningPreview = ({
-  mode,
-  onModeChange,
-  compact = false
-}: {
-  mode: LearningMode;
-  onModeChange: (mode: LearningMode) => void;
-  compact?: boolean;
-}) => {
-  const response = previewResponses[mode];
-
-  return (
-    <div
-      className={`product-preview${compact ? " product-preview--compact" : ""}`}
-      role={compact ? undefined : "group"}
-      aria-label={compact ? undefined : "학습 답변 미리보기"}
-      aria-hidden={compact ? true : undefined}
-    >
-      <div className="product-preview__chrome" aria-hidden="true">
-        <span>StudyBox AI</span>
-        <span>학습 미리보기</span>
-      </div>
-      <div className="product-preview__layout">
-        <div className="product-preview__settings">
-          <p>학습 모드</p>
-          <div className="product-preview__modes" aria-label="미리보기 학습 모드">
-            {(Object.entries(settingsLabels.mode) as Array<[LearningMode, string]>).map(([value, label]) => (
-              <button
-                className={value === mode ? "is-active" : ""}
-                type="button"
-                aria-pressed={value === mode}
-                disabled={compact}
-                tabIndex={compact ? -1 : undefined}
-                onClick={() => onModeChange(value)}
-                key={value}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="product-preview__question">
-            <span>나의 질문</span>
-            <p>{response.question}</p>
-          </div>
-        </div>
-        <article className="product-preview__answer" aria-live="polite">
-          <p className="product-preview__eyebrow">
-            {settingsLabels.mode[mode]} · 보통 · 보통 길이
-          </p>
-          <h3>{response.title}</h3>
-          <p className="product-preview__summary">{response.summary}</p>
-          <div className="product-preview__sections">
-            {response.sections.map((section) => (
-              <section key={section.title}>
-                <h4>{section.title}</h4>
-                <p>{section.content}</p>
-              </section>
-            ))}
-          </div>
-        </article>
-      </div>
-    </div>
-  );
-};
-
 const LandingPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [question, setQuestion] = useState("");
-  const [settings, setSettings] = useState<LearningSettings>(defaultLearningSettings);
-  const [storyIndex, setStoryIndex] = useState(0);
-  const [storyEnhanced, setStoryEnhanced] = useState(false);
-  const [lightHeader, setLightHeader] = useState(false);
+  const [settings, setSettings] = useState<LearningSettings>(defaultLandingSettings);
 
   useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updateMotion = () => setStoryEnhanced(!media.matches && "IntersectionObserver" in window);
-
-    updateMotion();
-    media.addEventListener("change", updateMotion);
-    return () => media.removeEventListener("change", updateMotion);
-  }, []);
-
-  useEffect(() => {
-    if (!storyEnhanced) {
-      return;
-    }
-
-    const steps = Array.from(document.querySelectorAll<HTMLElement>("[data-story-step]"));
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const activeEntry = entries.find((entry) => entry.isIntersecting);
-        if (activeEntry) {
-          setStoryIndex(Number((activeEntry.target as HTMLElement).dataset.storyStep || 0));
-        }
-      },
-      { rootMargin: "-46% 0px -46% 0px", threshold: 0 }
-    );
-
-    steps.forEach((step) => observer.observe(step));
-    return () => observer.disconnect();
-  }, [storyEnhanced]);
-
-  useEffect(() => {
-    let animationFrame = 0;
-
-    const updateHeaderTone = () => {
-      window.cancelAnimationFrame(animationFrame);
-      animationFrame = window.requestAnimationFrame(() => {
-        const lightSection = document.getElementById("categories");
-        if (lightSection) {
-          setLightHeader(window.scrollY >= lightSection.offsetTop - 52);
-        }
-      });
-    };
-
-    updateHeaderTone();
-    window.addEventListener("scroll", updateHeaderTone, { passive: true });
-    return () => {
-      window.cancelAnimationFrame(animationFrame);
-      window.removeEventListener("scroll", updateHeaderTone);
-    };
+    document.body.classList.add("agent-home-page");
+    return () => document.body.classList.remove("agent-home-page");
   }, []);
 
   const startLearning = (event?: FormEvent) => {
     event?.preventDefault();
+    const trimmedQuestion = question.trim();
+
+    if (!trimmedQuestion) {
+      return;
+    }
+
     const query = new URLSearchParams({
       mode: settings.mode,
       level: settings.level,
@@ -309,146 +173,168 @@ const LandingPage = () => {
     }).toString();
     const destination = `/app/new?${query}`;
 
-    if (question.trim()) {
-      window.sessionStorage.setItem(pendingQuestionKey, question.trim());
-    }
-
+    window.sessionStorage.setItem(pendingQuestionKey, trimmedQuestion);
     navigate(user ? destination : `/login?next=${encodeURIComponent(destination)}`);
   };
 
   const selectMode = (mode: LearningMode) => setSettings((current) => ({ ...current, mode }));
+  const activeAgent = learningAgents.find((agent) => agent.mode === settings.mode) || learningAgents[0];
+  const ActiveAgentIcon = activeAgent.icon;
+
+  const handleQuestionKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+    startLearning();
+  };
 
   return (
     <>
       <a className="skip-link" href="#main-content">
         본문으로 건너뛰기
       </a>
-      <SiteHeader tone={lightHeader ? "light" : "dark"} />
-      <main id="main-content" tabIndex={-1}>
-        <section id="hero" className="hero" aria-labelledby="hero-title">
-          <div className="hero__inner container">
-            <div className="hero__content">
-              <p className="hero__kicker">STUDYBOX AI</p>
-              <h1 id="hero-title">
-                같은 질문.<br />
-                <span>완전히 다른 공부.</span>
-              </h1>
-              <p className="hero__lead">
-                개념은 쉽게. 풀이는 끝까지. 시험은 핵심만.
-                <br />목적을 고르면, AI의 답변 방식이 달라집니다.
-              </p>
-              <div className="hero__actions" aria-label="StudyBox AI 바로가기">
-                <button className="button button--primary" type="button" onClick={() => startLearning()}>
-                  학습 시작하기
+      <SiteHeader />
+      <main id="main-content" className="agent-home" tabIndex={-1}>
+        <aside className="agent-dock" aria-labelledby="agent-dock-title">
+          <p className="agent-dock__eyebrow" id="agent-dock-title">에이전트 도크</p>
+          <div className="agent-dock__list">
+            {learningAgents.map((agent) => {
+              const AgentIcon = agent.icon;
+              const active = agent.mode === settings.mode;
+
+              return (
+                <button
+                  className={`agent-card${active ? " is-active" : ""}`}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => selectMode(agent.mode)}
+                  key={agent.mode}
+                >
+                  <AgentIcon className="agent-card__icon" size={30} weight="regular" aria-hidden="true" />
+                  <span className="agent-card__content">
+                    <strong>{agent.label}</strong>
+                    <span>{agent.description}</span>
+                  </span>
                 </button>
-                <a className="text-link" href="#story">
-                  어떻게 다른지 보기
-                </a>
-              </div>
-            </div>
-            <div className="hero__preview">
-              <LearningPreview mode={settings.mode} onModeChange={selectMode} compact />
-            </div>
-            <a className="scroll-cue" href="#story">아래로 스크롤</a>
+              );
+            })}
           </div>
-        </section>
+        </aside>
 
-        <section id="story" className={`story-section${storyEnhanced ? " is-enhanced" : ""}`} aria-labelledby="story-title">
-          <h2 id="story-title" className="visually-hidden">
-            StudyBox AI의 다섯 가지 학습 모드
-          </h2>
-          <div className="story-sticky">
-            <div className="story-frame container">
-              <header className="story-topline">
-                <p>하나의 AI · 다섯 학습 모드</p>
-                <p>목적에 맞는 답변</p>
-              </header>
-              <div className="story-panels">
-                {learningStories.map((story, index) => {
-                  const [firstLine, secondLine] = story.title.split("\n");
-                  return (
-                    <article
-                      className={`story-panel${index === storyIndex ? " is-active" : ""}${index < storyIndex ? " is-past" : ""}`}
-                      key={story.mode}
+        <section className="agent-workspace" aria-labelledby="agent-home-title">
+          <div className="agent-workspace__inner">
+            <label className="agent-mobile-select" htmlFor="mobile-agent-select">
+              <span>학습 코치 선택</span>
+              <span className="agent-mobile-select__control">
+                <select
+                  id="mobile-agent-select"
+                  value={settings.mode}
+                  onChange={(event) => selectMode(event.target.value as LearningMode)}
+                >
+                  {learningAgents.map((agent) => (
+                    <option value={agent.mode} key={agent.mode}>{agent.label}</option>
+                  ))}
+                </select>
+                <CaretDownIcon size={16} weight="bold" aria-hidden="true" />
+              </span>
+            </label>
+
+            <header className="agent-workspace__header">
+              <p>STUDYBOX AI</p>
+              <h1 id="agent-home-title">공부할 일을 맡겨보세요.</h1>
+              <span aria-live="polite">선택한 {activeAgent.label}가 최적의 방식으로 도와줄게요.</span>
+            </header>
+
+            <form className="agent-composer" onSubmit={startLearning} aria-label="학습 질문 시작">
+              <label className="visually-hidden" htmlFor="agent-question">문제나 궁금한 내용</label>
+              <textarea
+                id="agent-question"
+                rows={4}
+                maxLength={2000}
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
+                onKeyDown={handleQuestionKeyDown}
+                placeholder="문제나 궁금한 내용을 입력해 보세요"
+              />
+              <div className="agent-composer__footer">
+                <div className="agent-composer__settings">
+                  <label className="agent-select-control">
+                    <span className="visually-hidden">학습 코치</span>
+                    <ActiveAgentIcon size={20} weight="regular" aria-hidden="true" />
+                    <select
+                      aria-label="학습 코치"
+                      value={settings.mode}
+                      onChange={(event) => selectMode(event.target.value as LearningMode)}
                     >
-                      <p className="story-panel__meta">{story.code}</p>
-                      <h3>{firstLine}<br /><strong>{secondLine}</strong></h3>
-                      <p>{story.description}</p>
-                    </article>
-                  );
-                })}
+                      {learningAgents.map((agent) => (
+                        <option value={agent.mode} key={agent.mode}>{agent.label}</option>
+                      ))}
+                    </select>
+                    <CaretDownIcon size={14} weight="bold" aria-hidden="true" />
+                  </label>
+                  <label className="agent-select-control">
+                    <span className="visually-hidden">학습 수준</span>
+                    <SlidersHorizontalIcon size={20} weight="regular" aria-hidden="true" />
+                    <select
+                      aria-label="학습 수준"
+                      value={settings.level}
+                      onChange={(event) => setSettings((current) => ({
+                        ...current,
+                        level: event.target.value as LearningSettings["level"]
+                      }))}
+                    >
+                      {(Object.entries(settingsLabels.level) as Array<[LearningSettings["level"], string]>).map(([value, label]) => (
+                        <option value={value} key={value}>{label}</option>
+                      ))}
+                    </select>
+                    <CaretDownIcon size={14} weight="bold" aria-hidden="true" />
+                  </label>
+                  <label className="agent-select-control">
+                    <span className="visually-hidden">답변 길이</span>
+                    <NotepadIcon size={20} weight="regular" aria-hidden="true" />
+                    <select
+                      aria-label="답변 길이"
+                      value={settings.responseLength}
+                      onChange={(event) => setSettings((current) => ({
+                        ...current,
+                        responseLength: event.target.value as LearningSettings["responseLength"]
+                      }))}
+                    >
+                      {(Object.entries(settingsLabels.responseLength) as Array<[LearningSettings["responseLength"], string]>).map(([value, label]) => (
+                        <option value={value} key={value}>{label} 길이</option>
+                      ))}
+                    </select>
+                    <CaretDownIcon size={14} weight="bold" aria-hidden="true" />
+                  </label>
+                </div>
+                <button className="agent-submit" type="submit" disabled={!question.trim()}>
+                  <PaperPlaneTiltIcon size={20} weight="fill" aria-hidden="true" />
+                  <span>시작하기</span>
+                </button>
               </div>
-              <div className="story-progress" aria-hidden="true">
-                <div className="story-progress__rail"><span style={{ transform: `scaleX(${(storyIndex + 1) / learningStories.length})` }} /></div>
-                <p>{String(storyIndex + 1).padStart(2, "0")} <span>/ 05</span></p>
-              </div>
-            </div>
-          </div>
-          <div className="story-steps" aria-hidden="true">
-            {learningStories.map((story, index) => <span data-story-step={index} key={story.mode} />)}
-          </div>
-        </section>
+            </form>
 
-        <section id="categories" className="section product-section" aria-labelledby="categories-title">
-          <div className="container">
-            <header className="section-heading">
-              <p className="section-eyebrow">실제 답변 미리보기</p>
-              <h2 id="categories-title">같은 AI가 아니라.<br />내 목적에 맞는 AI.</h2>
-              <p>학습 모드를 눌러 같은 질문이 어떤 구조와 깊이의 답변으로 바뀌는지 확인해 보세요.</p>
-            </header>
-            <LearningPreview mode={settings.mode} onModeChange={selectMode} />
-          </div>
-        </section>
-
-        <section id="how-it-works" className="section process-section" aria-labelledby="how-it-works-title">
-          <div className="container">
-            <header className="section-heading">
-              <p className="section-eyebrow">설정은 짧게 · 집중은 길게</p>
-              <h2 id="how-it-works-title">설정은 짧게.<br />집중은 바로.</h2>
-            </header>
-            <ol className="process-list">
-              {[
-                ["오늘 필요한 모드 선택", "설명, 풀이, 요약, 시험, 수행평가 중 하나를 고릅니다."],
-                ["난이도와 길이 조절", "내 수준과 남은 시간에 맞게 답변의 깊이를 정합니다."],
-                ["질문하면 끝", "답변의 구성은 StudyBox AI가 선택한 모드에 맞춥니다."]
-              ].map(([title, content], index) => (
-                <li className="process-item" key={title}>
-                  <p className="process-item__number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</p>
-                  <div><h3>{title}</h3><p>{content}</p></div>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        <section id="learning-app" className="learning-app" aria-labelledby="learning-app-title">
-          <div className="container">
-            <div className="learning-app__content">
-              <header className="learning-app__header">
-                <p className="section-eyebrow">내 방식대로 공부하기</p>
-                <h2 id="learning-app-title">질문은 그대로.<br /><span>답변은 내 방식대로.</span></h2>
-                <p>초대 코드 베타 서비스입니다. 로그인 후 내 대화에 안전하게 저장됩니다.</p>
-              </header>
-              <div className="learning-workspace learning-workspace--start">
-                <form className="learning-form" onSubmit={startLearning}>
-                  <SettingsFields settings={settings} onChange={setSettings} prefix="landing" />
-                  <div className="learning-question">
-                    <label htmlFor="learning-question">무엇을 공부할까요?</label>
-                    <textarea id="learning-question" rows={5} maxLength={2000} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="예: 광합성 과정을 쉽게 설명해 줘" />
-                    <p>최대 2,000자까지 입력할 수 있습니다.</p>
-                  </div>
-                  <div className="learning-form__actions">
-                    <button className="button button--primary" type="submit">AI 질문 시작하기</button>
-                    <button className="button button--secondary" type="button" onClick={() => { setQuestion(""); setSettings(defaultLearningSettings); }}>초기화</button>
-                  </div>
-                  <p className="learning-disclaimer">현재 배포 뼈대는 모의 AI 답변으로 동작합니다. 실제 제공자는 운영 환경에서 연결합니다.</p>
-                </form>
+            <div className="agent-examples">
+              <p>예시로 시작해 보세요</p>
+              <div className="agent-examples__list">
+                {activeAgent.examples.map((example) => (
+                  <button type="button" onClick={() => setQuestion(example)} key={example}>
+                    <span>{example}</span>
+                    <ArrowRightIcon size={18} weight="regular" aria-hidden="true" />
+                  </button>
+                ))}
               </div>
             </div>
+
+            <p className="agent-workspace__helper">
+              <InfoIcon size={18} weight="regular" aria-hidden="true" />
+              에이전트와 설정에 따라 답변의 형식과 깊이가 달라집니다.
+            </p>
           </div>
         </section>
       </main>
-      <Footer />
     </>
   );
 };
@@ -794,6 +680,36 @@ const ChatPage = () => {
     loadConversation();
   }, [conversationId]);
 
+  const sendQuestion = async (questionValue: string) => {
+    const trimmedQuestion = questionValue.trim();
+
+    if (!conversationId || !trimmedQuestion || sending) {
+      return;
+    }
+
+    setQuestion(trimmedQuestion);
+    setSending(true);
+    setError("");
+
+    try {
+      const result = await api.sendMessage(conversationId, { question: trimmedQuestion, settings });
+      setMessages((current) => [...current, result.userMessage, result.assistantMessage]);
+      setQuestion("");
+      setConversation((current) => current ? { ...current, settings, updatedAt: result.assistantMessage.createdAt } : current);
+      await refreshList();
+    } catch (requestError) {
+      setQuestion(trimmedQuestion);
+      setError(getErrorMessage(requestError));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const sendMessage = (event?: FormEvent) => {
+    event?.preventDefault();
+    void sendQuestion(question);
+  };
+
   useEffect(() => {
     if (loading || sending || messages.length || !conversationId) {
       return;
@@ -801,34 +717,14 @@ const ChatPage = () => {
 
     const pendingQuestion = window.sessionStorage.getItem(pendingQuestionKey);
 
-    if (pendingQuestion) {
-      setQuestion(pendingQuestion);
-      window.sessionStorage.removeItem(pendingQuestionKey);
-    }
-  }, [loading, sending, messages.length, conversationId]);
-
-  const sendMessage = async (event?: FormEvent) => {
-    event?.preventDefault();
-
-    if (!conversationId || !question.trim() || sending) {
+    if (!pendingQuestion) {
       return;
     }
 
-    setSending(true);
-    setError("");
-
-    try {
-      const result = await api.sendMessage(conversationId, { question: question.trim(), settings });
-      setMessages((current) => [...current, result.userMessage, result.assistantMessage]);
-      setQuestion("");
-      setConversation((current) => current ? { ...current, settings, updatedAt: result.assistantMessage.createdAt } : current);
-      await refreshList();
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setSending(false);
-    }
-  };
+    window.sessionStorage.removeItem(pendingQuestionKey);
+    setQuestion(pendingQuestion);
+    void sendQuestion(pendingQuestion);
+  }, [loading, sending, messages.length, conversationId]);
 
   const saveTitle = async (event: FormEvent) => {
     event.preventDefault();

@@ -1,78 +1,83 @@
 # Design QA
 
-**Source visual truth**
+## Source Visual Truth
 
-- Reference URL: `https://www.apple.com/kr/macbook-pro/`
+- Selected direction: agent dock concept, option 2.
+- Normalized source: `design-qa-artifacts/source-agent-dock-1440x1024.png`.
+- Original generated source: `design-qa-artifacts/source-agent-dock-original-1487x1058.png`.
+- Desktop implementation: `design-qa-artifacts/implementation-agent-home-1440x1024.png`.
+- Mobile implementation: `design-qa-artifacts/implementation-agent-home-mobile-390x844.png`.
+- Full comparison: `design-qa-artifacts/comparison-agent-home-full.png`.
+- Focused workspace comparison: `design-qa-artifacts/comparison-agent-home-workspace.png`.
 
-**Implementation screenshot paths**
+## Viewport And State
 
-- `design-qa-artifacts/implementation-studybox-1280x720.png`
-- `design-qa-artifacts/implementation-studybox-mobile-390x844.png`
-- `design-qa-artifacts/implementation-light-section-mobile-390x844.png`
-- `design-qa-artifacts/implementation-chat-desktop-1280x720.png`
-- `design-qa-artifacts/implementation-chat-mobile-390x844.png`
-- `design-qa-artifacts/implementation-chat-settings-mobile-390x844.png`
+- Desktop: 1440 × 1024 viewport, signed-out home, default `풀이 코치`, `보통`, `보통 길이`, empty composer.
+- Mobile: 390 × 844 viewport override, signed-out home, default `풀이 코치`, collapsed dock represented by the native coach selector.
+- Browser-rendered evidence was captured in the Codex in-app browser from `http://127.0.0.1:5173/`.
+- Desktop document metrics were 1440px wide by 1024px high with no horizontal or vertical overflow.
+- Mobile document width remained within the viewport with no horizontal overflow; vertical scrolling exposed the example list normally.
 
-**Viewport and state**
+## Full-view Comparison Evidence
 
-- Desktop comparison: 1280 × 720, signed-out landing hero, default concept mode.
-- Mobile checks: 390 × 844, signed-out landing, login, light marketing section, authenticated empty chat, settings collapsed and expanded.
-- Reduced motion: browser-emulated `prefers-reduced-motion: reduce`, all five story panels visible in the normal document flow.
+- The normalized source and final desktop implementation were combined side by side in `comparison-agent-home-full.png` before judgment.
+- The final implementation matches the source hierarchy: slim dark header, 260px agent dock, oversized centered Korean headline, one dominant prompt composer, three example rows, and the centered helper line.
+- Agent spacing, active blue rail, header CTA, workspace width, composer position, and below-composer rhythm align without a material composition or density mismatch.
+- The implementation intentionally uses live semantic controls rather than rasterized UI while retaining the source geometry and visual treatment.
 
-**Full-view comparison evidence**
+## Focused Region Comparison Evidence
 
-- The live Apple reference and `design-qa-artifacts/implementation-studybox-1280x720.png` were reviewed side by side at 1280 × 720. The third-party source capture is intentionally not persisted in the repository.
-- The implementation matches the intended black product-story canvas, compact navigation, oversized Korean display typography, blue gradient emphasis, pill CTA, generous negative space, and a product visual entering at the bottom of the first viewport.
-- The Apple hardware image is intentionally replaced by the real StudyBox learning interface specified in the brief; no Apple imagery, logo, code, placeholder art, custom SVG, or CSS illustration is copied.
+- `comparison-agent-home-workspace.png` compares the headline, subtitle, composer, setting controls, CTA, and example rows at the same crop.
+- Typography scale, composer width and height, dividers, radii, control grouping, and row spacing remain consistent with the source at readable zoom.
+- Phosphor icons use one regular-weight line family and replace all visible source icons without custom SVG, CSS drawings, emoji, or placeholder assets.
 
-**Focused region comparison evidence**
+## Required Fidelity Surfaces
 
-- A separate crop was not needed because the 1280 × 720 source and implementation views keep the navigation, display copy, CTA, product visual edge, typography, spacing, and colors readable at original resolution.
-- Product-specific UI detail was checked separately in the desktop and mobile chat captures because it has no one-to-one counterpart in the reference hardware image.
+- Fonts and typography: the existing SF/Apple Korean system stack is preserved. The display heading uses the source-like heavy weight, tight tracking, and balanced Korean wrapping; body and control copy remain readable at 14–16px-equivalent sizes.
+- Spacing and layout rhythm: the 74px header, 260px dock, 940px workspace, 20px composer radius, agent cadence, and example dividers match the selected direction. Mobile spacing converts to a single-column flow without clipped controls.
+- Colors and tokens: black and charcoal surfaces, white primary text, muted gray secondary text, and `#0071e3`/`#2997ff` action and selected states reuse the existing StudyBox token system.
+- Image quality and asset fidelity: the design contains no raster artwork. The stored source remains sharp, and all interface symbols come from the Phosphor icon package rather than improvised assets.
+- Copy and content: the headline, five Korean coach labels, descriptions, settings, example questions, and helper copy are coherent and match the approved agent-first brief.
 
-**Required fidelity surfaces**
+## Interaction And Accessibility Evidence
 
-- Fonts and typography: system SF/Apple Korean fallbacks are used without external font downloads; display headings use a tight Apple-like scale, weight, line height, and letter spacing while body copy remains readable.
-- Spacing and layout rhythm: the 1180px marketing container, 32–36px product radii, full-viewport story stages, light card spacing, and responsive gutters preserve the reference rhythm without copying its content structure.
-- Colors and visual tokens: black and charcoal marketing surfaces transition to `#f5f5f7` and white product surfaces; `#0071e3` and `#2997ff` are limited to actions and selected states. Dark and light headers switch with the page theme.
-- Image quality and asset fidelity: the redesign uses the real rendered StudyBox UI as its product visual. There are no missing raster assets, stretched images, fake icons, or placeholder artwork.
-- Copy and content: all product guidance remains Korean, realistic, and tied to the five supported learning modes.
-- Accessibility and behavior: semantic labels, visible focus styles, selected states, mobile `aria-expanded`, disabled composer state, keyboard-reachable controls, and reduced-motion fallback are present.
+- Browser checks passed for desktop coach switching, dynamic example replacement, example-to-composer filling, native level selection, submit-button enablement, and mobile coach switching.
+- Automated coverage passes for Enter submission, Shift+Enter newline behavior, Korean IME composition protection, empty-submit prevention, pending-question persistence, one-time automatic sending, and failure restoration.
+- DOM snapshots expose a labeled main region, complementary agent dock, `aria-pressed` coach buttons, labeled native selects, labeled textarea, disabled empty submit state, and keyboard-reachable controls.
+- Desktop and mobile console error checks returned no errors.
 
-**Comparison history**
+## Comparison History
 
-1. Initial pass
-   - [P2] The real product preview began entirely below the desktop fold, leaving the first viewport visually empty compared with the reference.
-   - [P2] The landing header stayed dark after entering light sections, weakening contrast and continuity.
-   - [P2] Chat level and response-length options wrapped vertically in the desktop sidebar.
-2. Fixes
-   - Reduced hero top spacing and section gap so the StudyBox product surface is visible in the first viewport.
-   - Added scroll-aware dark/light header switching and an opaque light header surface.
-   - Changed chat secondary settings to full-width rows with three stable columns.
+1. Initial implementation pass
+   - [P2] Desktop headline and dock items were smaller and denser than the selected visual.
+   - [P2] The active coach used a stronger filled card than the source, and the header login action lacked the source's solid blue emphasis.
+   - [P2] The composer and example block did not share the source's vertical rhythm.
+2. Correction pass
+   - Increased display typography and brand scale, expanded and repositioned the dock cadence, removed the active-card fill, restored the solid blue login action, and tuned the composer sections.
+   - Re-captured desktop and mobile states, normalized the source to 1440 × 1024, and rebuilt full and focused comparisons.
 3. Final pass
-   - The revised desktop hero shows the product surface above the fold.
-   - The mobile light-section capture shows the light header with correct contrast.
-   - The desktop and expanded mobile chat captures show unbroken option labels and usable controls.
-   - Browser console checks returned no JavaScript errors, and the preview-mode and mobile-settings interactions passed.
+   - No actionable P0, P1, or P2 layout, typography, color, icon, copy, responsive, interaction, or accessibility findings remain.
+   - Mobile remains vertically scrollable with no horizontal overflow, and primary controls stay visible and operable.
 
-**Findings**
+## Findings
 
 - No actionable P0, P1, or P2 findings remain.
 
-**Open Questions**
+## Open Questions
 
 - None.
 
-**Implementation Checklist**
+## Implementation Checklist
 
-- Landing, auth, account, and chat themes are implemented.
-- Preview mode selection updates the final learning setting.
-- Sticky story motion and reduced-motion fallback are implemented.
-- Mobile settings expansion and composer states are verified.
-- Type checking, automated tests, production build, and browser console checks pass.
+- Agent-first single-screen home implemented.
+- Five coach modes and dynamic examples implemented.
+- Native settings and keyboard composer behavior implemented.
+- Pending question auto-send and failure recovery implemented.
+- Desktop and mobile browser evidence captured.
+- Type checking, automated tests, production build, and console checks passed.
 
-**Follow-up Polish**
+## Follow-up Polish
 
-- [P3] If a future brand asset is created, the hero can support an additional bespoke learning visual without changing the current layout.
+- [P3] The signed-in home header can later add a compact recent-conversation affordance if product scope expands beyond the current single-task entry point.
 
 final result: passed
