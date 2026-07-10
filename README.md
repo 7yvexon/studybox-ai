@@ -1,64 +1,130 @@
 # StudyBox AI
 
-학생이 학습 목적을 먼저 선택하면, 그 목적에 맞는 답변 방식을 제공하도록 준비하는 학교 모의창업 프로젝트용 AI 학습 서비스입니다.
+StudyBox AI는 학습 목적에 맞춰 답변 방식을 바꾸는 초대 코드 기반 학습 서비스의 실사용 MVP 뼈대입니다. 현재 기본 AI 제공자는 `mock`이며, API 키 없이도 회원가입·대화 저장·사용량 제한·화면 흐름을 검증할 수 있습니다.
 
-## 프로젝트 목표
-
-복잡한 프롬프트를 작성하지 않아도 개념 설명, 문제 풀이, 핵심 요약, 시험 대비, 수행평가 준비처럼 필요한 학습 방식을 선택할 수 있는 서비스의 초기 프론트엔드 기반을 만듭니다.
-
-## 이번 단계에서 구현한 기능
-
-- 검정과 블루 포인트 중심의 반응형 단일 랜딩페이지
-- 고정 헤더, 내부 앵커 내비게이션, 모바일 메뉴
-- 화면 고정형 스토리텔링, 다섯 학습 모드의 마스크 전환과 진행 표시
-- 5개 학습 카테고리와 향후 선택 기능용 `data-category` 속성
-- 랜딩페이지 카테고리에서 바로 이어지는 학습 모드 선택
-- 학습 수준·답변 길이 설정, 질문 입력, 모드별 체험 답변 출력
-- 마지막 학습 모드·수준·답변 길이의 브라우저 저장 및 복원
-- 빈 질문 안내, 답변 준비 상태 알림, 키보드 접근 가능한 학습 폼
-- IntersectionObserver 기반 스토리 전환·페이드업과 `prefers-reduced-motion` 정적 대체
-- 키보드 포커스, 건너뛰기 링크, 시맨틱 HTML 등 기본 접근성 처리
-
-## 아직 구현하지 않은 기능
-
-- 채팅, 로그인, 데이터베이스, 파일 업로드
-- Node.js·Express 백엔드, 카테고리별 시스템 프롬프트, AI API 연결
-
-## 파일 구조
+## 구성
 
 ```text
-studybox-ai/
-├─ StudyBox AI 실행.bat # Windows 원클릭 실행 파일
-├─ index.html       # 랜딩페이지의 시맨틱 구조
-├─ css/
-│  └─ style.css     # 디자인 토큰, 레이아웃, 반응형·접근성 스타일
-├─ js/
-│  └─ main.js       # 내비게이션, 모바일 메뉴, 스크롤 스토리, 등장 효과
-├─ assets/
-│  ├─ images/       # 향후 이미지 에셋
-│  └─ icons/        # 향후 아이콘 에셋
-└─ README.md
+apps/
+├─ api/                 Express API, 인증, PostgreSQL 저장소, AI 어댑터
+└─ web/                 React + Vite 사용자 화면
+packages/
+└─ shared/              공통 학습 설정·대화 타입
+infra/
+├─ nginx/               HTTP 및 TLS Nginx 설정
+├─ backup.sh            PostgreSQL 백업
+└─ restore.sh           PostgreSQL 복구
+docker-compose.yml      API, 웹, PostgreSQL 운영 구성
 ```
 
-## 실행 방법
+## 제공 기능
 
-별도 설치나 빌드 과정이 없는 정적 웹사이트입니다. Windows에서는 프로젝트 루트의 `StudyBox AI 실행.bat` 파일을 더블클릭하면 로컬 서버가 시작되고 기본 브라우저에서 사이트가 열립니다. 서버를 종료하려면 실행 창에서 `Ctrl+C`를 누르세요.
+- 이메일·비밀번호 가입, 이메일 인증, 비밀번호 재설정, 로그아웃, 계정 삭제
+- 한 번만 사용할 수 있는 초대 코드 베타 가입
+- 사용자별 대화 생성·조회·제목 수정·삭제와 영구 저장
+- 다섯 학습 모드, 세 학습 수준, 세 답변 길이 설정
+- 계정당 기본 일 50회 AI 답변 제한과 단기 요청 제한
+- Argon2id 비밀번호 해시, 만료 DB 세션, `HttpOnly`·`Secure`·`SameSite` 쿠키
+- 모의 AI와 OpenAI 호환 AI 엔드포인트를 교체할 수 있는 `ChatProvider` 인터페이스
+- 상태 점검, 구조화 로그, Docker Compose, Nginx, CI 및 수동 배포 워크플로
 
-Python 3가 설치되어 있어야 하며, 8000번 포트가 이미 사용 중이면 해당 프로그램을 종료한 뒤 다시 실행하세요.
+파일 업로드, 사진 분석, 소셜 로그인, 관리자 웹 UI는 첫 MVP 범위에 포함하지 않습니다.
 
-배치 파일을 사용하지 않는 경우에는 아래처럼 수동으로 실행할 수 있습니다.
+## 빠른 시작
+
+Node.js 20.18 이상, Docker Desktop 또는 Docker Engine이 필요합니다.
+
+1. 환경 파일을 만들고 값을 바꿉니다.
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+   로컬에서 API 키 없이 테스트하려면 `APP_ORIGIN=http://localhost:5173`, `MAIL_TRANSPORT=console`, `AI_PROVIDER=mock`으로 두세요. `POSTGRES_PASSWORD`는 반드시 긴 영문·숫자 임의 문자열로 교체하세요.
+
+2. 개발용 데이터베이스만 시작합니다.
+
+   ```powershell
+   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d database
+   ```
+
+3. 의존성 설치, DB 마이그레이션, 초대 코드 발급을 실행합니다.
+
+   ```powershell
+   npm ci
+   npm run db:migrate
+   npm run invite:create -- school-beta-2026
+   ```
+
+4. 개발 서버를 시작하고 `http://localhost:5173`을 엽니다.
+
+   ```powershell
+   npm run dev
+   ```
+
+`MAIL_TRANSPORT=console`에서는 인증·재설정 링크가 API 로그에만 출력됩니다. 운영 환경에서는 SMTP를 사용하세요.
+
+## 검사 명령
 
 ```powershell
-cd C:\Users\User\Documents\Code\studybox-gited\repos\studybox-ai
-python -m http.server 8000
+npm run typecheck
+npm test
+npm run build
 ```
 
-그런 다음 브라우저에서 `http://localhost:8000`을 엽니다.
+검사에는 공통 설정 검증과 모의 AI 응답 형식 검증이 포함됩니다. 실제 PostgreSQL·SMTP·브라우저 통합 흐름은 배포 후보 환경에서 수동으로도 확인해야 합니다.
 
-## 다음 개발 단계
+## 운영 배포
 
-1. Node.js와 Express 백엔드
-2. 카테고리별 시스템 프롬프트
-3. 실제 AI API 연결
-4. 로그인과 학습 기록 저장
-5. 파일 업로드와 문제 사진 분석
+1. Ubuntu VPS에 Docker Compose와 TLS 인증서가 준비된 상태에서 저장소를 배치합니다.
+2. `.env.example`을 복사한 `.env`에 운영 도메인, 긴 DB 비밀번호, SMTP 자격 증명, 관리자 이메일을 입력합니다. `.env`는 저장소에 커밋하지 않습니다.
+3. 첫 HTTP 배포를 실행합니다.
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+4. 도메인 인증서를 발급한 뒤 `infra/nginx/tls.conf.example`을 `infra/nginx/tls.conf`로 복사해 실제 도메인으로 바꿉니다. 다음 구성으로 HTTPS를 적용합니다.
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.production.yml up -d --build
+   ```
+
+PostgreSQL은 Compose 내부 네트워크에만 있고 호스트 포트를 열지 않습니다. `/api/health`는 프로세스 상태, `/api/ready`는 DB 연결 상태를 반환합니다.
+
+GitHub Actions의 `CI`는 타입 검사·테스트·빌드·두 Docker 이미지 빌드를 검증합니다. `Deploy` 워크플로는 수동 실행만 가능하며 `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`, `DEPLOY_SSH_KEY` 환경 시크릿이 준비된 GitHub `production` 환경에서 실행합니다.
+
+## 백업과 복구
+
+VPS의 프로젝트 루트에서 매일 다음 명령을 실행하도록 스케줄링합니다.
+
+```bash
+BACKUP_DIR=/srv/studybox-backups sh infra/backup.sh
+```
+
+스크립트는 14일이 지난 로컬 백업을 삭제합니다. 원격 또는 암호화된 백업 저장소로 별도 복제해야 합니다. 복구 전에는 운영 DB를 별도 보존하고 다음 명령을 사용합니다.
+
+```bash
+sh infra/restore.sh /srv/studybox-backups/studybox-YYYYMMDDTHHMMSSZ.sql.gz
+```
+
+## 실제 AI 제공자 연결
+
+기본값은 `AI_PROVIDER=mock`입니다. 실제 OpenAI 호환 제공자를 연결할 때만 다음 값을 운영 환경변수에 설정합니다.
+
+```text
+AI_PROVIDER=openai-compatible
+AI_BASE_URL=https://provider.example.com/v1
+AI_MODEL=provider-model-id
+AI_API_KEY=provider-secret
+```
+
+API 키는 `.env` 또는 배포 플랫폼의 시크릿에만 저장하고, 브라우저 환경변수·React 번들·저장소에는 넣지 않습니다. 제공자가 Chat Completions 호환이 아니면 `apps/api/src/ai`에 `ChatProvider` 구현을 추가합니다.
+
+## 배포 전 확인
+
+- HTTPS, `APP_ORIGIN`, SMTP, 관리자 이메일, 데이터베이스 백업 경로를 실제 값으로 설정한다.
+- 초대 코드 생성·가입·이메일 인증·로그인·대화·삭제·계정 탈퇴를 확인한다.
+- 두 사용자 계정으로 서로의 대화 URL에 접근할 수 없는지 확인한다.
+- 일 50회 한도와 모의 제공자 오류·실제 제공자 시간 초과를 확인한다.
+- 모바일 폭, 키보드 전용 조작, 감소된 모션 설정, 브라우저 콘솔 오류를 확인한다.

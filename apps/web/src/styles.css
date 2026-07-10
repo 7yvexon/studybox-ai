@@ -1,0 +1,231 @@
+@import "../../../css/style.css";
+
+#root {
+  min-height: 100svh;
+}
+
+.auth-page,
+.account-page {
+  min-height: 100svh;
+  padding: calc(var(--header-height) + 56px) 0 72px;
+}
+
+.auth-card,
+.account-card {
+  width: min(calc(100% - 48px), 540px);
+  margin-inline: auto;
+  padding: clamp(28px, 6vw, 48px);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-surface);
+}
+
+.auth-card h1,
+.account-card h1 {
+  margin-bottom: 12px;
+  font-size: clamp(2rem, 5vw, 3rem);
+  letter-spacing: -0.06em;
+  line-height: 1.15;
+}
+
+.auth-card__intro,
+.account-card__intro {
+  margin-bottom: 30px;
+  color: var(--color-text-sub);
+}
+
+.auth-form {
+  display: grid;
+  gap: 18px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.auth-form input,
+.conversation-title-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.auth-form input:focus,
+.conversation-title-input:focus {
+  border-color: var(--color-primary);
+  outline: 0;
+}
+
+.form-message {
+  margin: 0;
+  color: var(--color-text-sub);
+  font-size: 0.88rem;
+}
+
+.form-message--error {
+  color: #ff9292;
+}
+
+.auth-links {
+  display: grid;
+  gap: 8px;
+  margin-top: 24px;
+  color: var(--color-text-sub);
+  font-size: 0.88rem;
+}
+
+.auth-links a {
+  color: var(--color-primary);
+}
+
+.app-header {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(0, 0, 0, 0.94);
+}
+
+.app-header__inner {
+  display: flex;
+  min-height: var(--header-height);
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--color-text-sub);
+  font-size: 0.85rem;
+}
+
+.app-link-button {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-sub);
+  cursor: pointer;
+}
+
+.app-link-button:hover,
+.app-link-button:focus-visible {
+  color: var(--color-text);
+}
+
+.chat-app--react {
+  min-height: calc(100svh - var(--header-height));
+}
+
+.conversation-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.conversation-list__item {
+  display: block;
+  padding: 10px;
+  border-radius: 9px;
+  color: var(--color-text-sub);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.conversation-list__item:hover,
+.conversation-list__item.is-active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text);
+}
+
+.conversation-list__item strong,
+.conversation-list__item span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-list__item span {
+  margin-top: 3px;
+  color: var(--color-text-muted);
+  font-size: 0.73rem;
+}
+
+.chat-settings__new {
+  width: 100%;
+  margin-top: 18px;
+}
+
+.chat-settings__delete {
+  margin-top: auto;
+  color: #ff9292;
+}
+
+.chat-conversation__title {
+  width: min(100%, 840px);
+  margin: 0 auto;
+  padding: 18px clamp(12px, 3vw, 42px) 0;
+}
+
+.chat-conversation__title form {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-conversation__title button {
+  flex: 0 0 auto;
+}
+
+.learning-option input:focus-visible + span {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.loading-page {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  color: var(--color-text-sub);
+}
+
+@media (max-width: 900px) {
+  .app-header__actions > span {
+    display: none;
+  }
+
+  .conversation-list {
+    max-height: 190px;
+    overflow-y: auto;
+  }
+
+  .chat-settings__delete {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .auth-card,
+  .account-card {
+    width: min(calc(100% - 40px), 540px);
+  }
+
+  .app-header__inner {
+    gap: 12px;
+  }
+
+  .app-header__actions {
+    gap: 10px;
+    font-size: 0.76rem;
+  }
+}
