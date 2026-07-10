@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="선택한 학습 방식으로 질문을 이어가는 StudyBox AI 학습 채팅"
+    />
+    <meta name="theme-color" content="#000000" />
+    <title>학습 채팅 | StudyBox AI</title>
+    <link rel="stylesheet" href="./css/style.css" />
+    <script src="./js/main.js" defer></script>
+  </head>
+  <body class="chat-page">
+    <a class="skip-link" href="#chat-main">대화 영역으로 건너뛰기</a>
+
+    <header class="chat-header">
+      <div class="chat-header__inner chat-shell">
+        <a class="brand-link" href="index.html" aria-label="StudyBox AI 처음으로 이동">
+          StudyBox <span>AI</span>
+        </a>
+        <a class="chat-header__back" href="index.html#learning-app">학습 설정으로 돌아가기</a>
+      </div>
+    </header>
+
+    <main id="chat-main" class="chat-app" tabindex="-1" data-chat-app>
+      <div class="chat-app__layout chat-shell">
+        <aside class="chat-settings" aria-labelledby="chat-settings-title">
+          <button
+            class="chat-settings__toggle"
+            type="button"
+            aria-controls="chat-settings-content"
+            aria-expanded="false"
+            data-chat-settings-toggle
+          >
+            학습 설정
+            <span aria-hidden="true">⌄</span>
+          </button>
+
+          <div id="chat-settings-content" class="chat-settings__content">
+            <div class="chat-settings__header">
+              <div>
+                <p class="chat-settings__eyebrow">STUDY SETTINGS</p>
+                <h1 id="chat-settings-title">내 학습 방식</h1>
+              </div>
+              <button class="chat-new-button" type="button" data-new-chat>새 대화</button>
+            </div>
+
+            <form class="chat-settings__form" data-chat-settings-form>
+              <fieldset class="learning-fieldset">
+                <legend>학습 모드</legend>
+                <div class="chat-settings__option-grid">
+                  <label class="learning-option">
+                    <input type="radio" name="mode" value="concept" />
+                    <span>개념 설명</span>
+                  </label>
+                  <label class="learning-option">
+                    <input type="radio" name="mode" value="solve" />
+                    <span>문제 풀이</span>
+                  </label>
+                  <label class="learning-option">
+                    <input type="radio" name="mode" value="summary" />
+                    <span>핵심 요약</span>
+                  </label>
+                  <label class="learning-option">
+                    <input type="radio" name="mode" value="exam" />
+                    <span>시험 대비</span>
+                  </label>
+                  <label class="learning-option">
+                    <input type="radio" name="mode" value="performance" />
+                    <span>수행평가</span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset class="learning-fieldset">
+                <legend>학습 수준</legend>
+                <div class="learning-option-grid">
+                  <label class="learning-option">
+                    <input type="radio" name="level" value="basic" />
+                    <span>기초</span>
+                  </label>
+                  <label class="learning-option">
+                    <input type="radio" name="level" value="standard" />
+                    <span>보통</span>
+                  </label>
+                  <label class="learning-option">
+                    <input type="radio" name="level" value="advanced" />
+                    <span>심화</span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset class="learning-fieldset">
+                <legend>답변 길이</legend>
+                <div class="learning-option-grid">
+                  <label class="learning-option">
+                    <input type="radio" name="responseLength" value="short" />
+                    <span>짧게</span>
+                  </label>
+                  <label class="learning-option">
+                    <input type="radio" name="responseLength" value="standard" />
+                    <span>보통</span>
+                  </label>
+                  <label class="learning-option">
+                    <input type="radio" name="responseLength" value="detailed" />
+                    <span>자세히</span>
+                  </label>
+                </div>
+              </fieldset>
+            </form>
+          </div>
+        </aside>
+
+        <section class="chat-workspace" aria-labelledby="chat-title">
+          <div class="chat-conversation">
+            <div class="chat-conversation__inner">
+              <div class="chat-empty-state" data-chat-empty-state>
+                <p class="chat-empty-state__eyebrow">STUDYBOX AI CHAT</p>
+                <h2 id="chat-title">무엇을 더 공부해 볼까요?</h2>
+                <p>선택한 학습 방식에 맞춰 다음 질문부터 답변을 이어갑니다.</p>
+              </div>
+              <div class="chat-message-list" data-chat-messages aria-label="학습 대화 내용" role="log"></div>
+            </div>
+          </div>
+
+          <form class="chat-composer" data-chat-form novalidate>
+            <div class="chat-composer__inner">
+              <label class="visually-hidden" for="chat-question">추가 질문</label>
+              <textarea
+                id="chat-question"
+                name="question"
+                rows="1"
+                maxlength="500"
+                placeholder="궁금한 내용을 이어서 질문해 보세요"
+                aria-describedby="chat-question-hint chat-question-error"
+              ></textarea>
+              <div class="chat-composer__footer">
+                <div>
+                  <p id="chat-question-hint">최대 500자까지 입력할 수 있습니다.</p>
+                  <p id="chat-question-error" class="chat-composer__error" hidden></p>
+                </div>
+                <button class="chat-send-button" type="submit">보내기 <span aria-hidden="true">↑</span></button>
+              </div>
+            </div>
+          </form>
+          <p class="chat-live" data-chat-live role="status" aria-live="polite"></p>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
