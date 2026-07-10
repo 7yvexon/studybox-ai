@@ -10,28 +10,24 @@ import { pinoHttp } from "pino-http";
 import { z } from "zod";
 
 import { createChatProvider } from "./ai/provider.js";
+import { loginSchema, registerSchema } from "./auth/validation.js";
 import { config } from "./config.js";
 import { query } from "./db/index.js";
 import {
   appendMessages,
-  consumeAuthToken,
-  createAuthToken,
   createConversation,
   createSession,
   deleteConversation,
   deleteSession,
   deleteUser,
-  findUserByEmail,
+  findUserByUsername,
   getConversation,
   getConversationContext,
   listConversations,
-  markEmailVerified,
   registerUser,
   reserveUsage,
-  updateConversationTitle,
-  updatePassword
+  updateConversationTitle
 } from "./db/repository.js";
-import { createEmailService } from "./email/service.js";
 import { errorHandler, notFound, parseBody, ApiError } from "./lib/http.js";
 import { createOpaqueToken, hashPassword, hashToken, verifyPassword } from "./lib/security.js";
 import { clearSessionCookie, requireAuth, requireSameOrigin, setSessionCookie } from "./middleware/auth.js";
@@ -48,18 +44,6 @@ const defaultSettings: LearningSettings = {
   responseLength: "standard"
 };
 
-const emailSchema = z.string().trim().toLowerCase().email().max(254);
-const passwordSchema = z.string().min(12).max(128);
-
-const registerSchema = z.object({
-  email: emailSchema,
-  password: passwordSchema,
-  inviteCode: z.string().trim().min(8).max(120)
-});
-
-const loginSchema = z.object({ email: emailSchema, password: z.string().min(1).max(128) });
-const tokenSchema = z.object({ token: z.string().min(32).max(200) });
-const resetSchema = tokenSchema.extend({ password: passwordSchema });
 const conversationSchema = z.object({
   title: z.string().trim().min(1).max(120).optional(),
   settings: learningSettingsSchema.optional()
@@ -93,9 +77,7 @@ const getConversationId = (request: Request) => {
 export const createApp = () => {
   const logger = pino({ level: config.logLevel });
   const provider = createChatProvider(config);
-  const emailService = createEmailService(config, logger);
   const app = express();
-  const appOrigin = new URL(config.appOrigin).origin;
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 10,
@@ -125,20 +107,6 @@ export const createApp = () => {
   app.use(express.json({ limit: "16kb" }));
   app.use(cookieParser());
 
-  const sendTokenEmail = async (
-    userId: string,
-    email: string,
-    purpose: "verify_email" | "reset_password"
-  ) => {
-    const token = createOpaqueToken();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-    await createAuthToken(userId, hashToken(token), purpose, expiresAt);
-    const route = purpose === "verify_email" ? "verify-email" : "reset-password";
-    const subject = purpose === "verify_email" ? "StudyBox AI 이메일 인증" : "StudyBox AI 비밀번호 재설정";
-    const text = `${appOrigin}/${route}?token=${encodeURIComponent(token)}\n이 링크는 1시간 동안 유효합니다.`;
-    await emailService.send({ to: email, subject, text });
-  };
-
   app.get("/api/health", (_request, response) => {
     response.json({ status: "ok", provider: provider.name, timestamp: new Date().toISOString() });
   });
@@ -158,29 +126,24 @@ export const createApp = () => {
     asyncRoute(async (request, response) => {
       const input = parseBody(registerSchema, request);
       const user = await registerUser({
-        email: input.email,
+        username: input.username,
         passwordHash: await hashPassword(input.password),
         inviteHash: hashToken(input.inviteCode),
-        role: config.adminEmailSet.has(input.email) ? "admin" : "user"
+        realName: input.realName,
+        schoolName: input.schoolName,
+        grade: input.grade,
+        classNumber: input.classNumber,
+        studentNumber: input.studentNumber,
+        role: config.adminUserIdSet.has(input.username) ? "admin" : "user"
       });
-      await sendTokenEmail(user.id, user.email, "verify_email");
-      response.status(201).json({ message: "인증 이메일을 보냈습니다. 이메일 인증 후 로그인해 주세요." });
-    })
-  );
-
-  app.post(
-    "/api/auth/verify-email",
-    requireSameOrigin,
-    asyncRoute(async (request, response) => {
-      const { token } = parseBody(tokenSchema, request);
-      const userId = await consumeAuthToken(hashToken(token), "verify_email");
-
-      if (!userId) {
-        throw new ApiError(400, "INVALID_TOKEN", "인증 링크가 유효하지 않거나 만료되었습니다.");
-      }
-
-      await markEmailVerified(userId);
-      response.status(204).end();
+      const token = createOpaqueToken();
+      await createSession(
+        user.id,
+        hashToken(token),
+        new Date(Date.now() + config.sessionTtlDays * 24 * 60 * 60 * 1000)
+      );
+      setSessionCookie(response, token);
+      response.status(201).json({ user });
     })
   );
 
@@ -189,15 +152,11 @@ export const createApp = () => {
     requireSameOrigin,
     authLimiter,
     asyncRoute(async (request, response) => {
-      const { email, password } = parseBody(loginSchema, request);
-      const user = await findUserByEmail(email);
+      const { username, password } = parseBody(loginSchema, request);
+      const user = await findUserByUsername(username);
 
       if (!user || !(await verifyPassword(user.password_hash, password))) {
-        throw new ApiError(401, "INVALID_CREDENTIALS", "이메일 또는 비밀번호가 올바르지 않습니다.");
-      }
-
-      if (!user.email_verified_at) {
-        throw new ApiError(403, "EMAIL_NOT_VERIFIED", "이메일 인증을 먼저 완료해 주세요.");
+        throw new ApiError(401, "INVALID_CREDENTIALS", "아이디 또는 비밀번호가 올바르지 않습니다.");
       }
 
       const token = createOpaqueToken();
@@ -223,39 +182,6 @@ export const createApp = () => {
       }
 
       clearSessionCookie(response);
-      response.status(204).end();
-    })
-  );
-
-  app.post(
-    "/api/auth/forgot-password",
-    requireSameOrigin,
-    authLimiter,
-    asyncRoute(async (request, response) => {
-      const { email } = parseBody(z.object({ email: emailSchema }), request);
-      const user = await findUserByEmail(email);
-
-      if (user?.email_verified_at) {
-        await sendTokenEmail(user.id, user.email, "reset_password");
-      }
-
-      response.status(204).end();
-    })
-  );
-
-  app.post(
-    "/api/auth/reset-password",
-    requireSameOrigin,
-    authLimiter,
-    asyncRoute(async (request, response) => {
-      const { token, password } = parseBody(resetSchema, request);
-      const userId = await consumeAuthToken(hashToken(token), "reset_password");
-
-      if (!userId) {
-        throw new ApiError(400, "INVALID_TOKEN", "재설정 링크가 유효하지 않거나 만료되었습니다.");
-      }
-
-      await updatePassword(userId, await hashPassword(password));
       response.status(204).end();
     })
   );

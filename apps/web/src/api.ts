@@ -39,17 +39,19 @@ const request = async <T>(path: string, options: RequestInit = {}): Promise<T> =
 
 export const api = {
   getMe: () => request<{ user: CurrentUser }>("/api/me"),
-  register: (input: { email: string; password: string; inviteCode: string }) =>
-    request<{ message: string }>("/api/auth/register", { method: "POST", body: JSON.stringify(input) }),
-  login: (input: { email: string; password: string }) =>
+  register: (input: {
+    username: string;
+    password: string;
+    inviteCode: string;
+    realName: string;
+    schoolName: string;
+    grade: number;
+    classNumber: number;
+    studentNumber: number;
+  }) => request<{ user: CurrentUser }>("/api/auth/register", { method: "POST", body: JSON.stringify(input) }),
+  login: (input: { username: string; password: string }) =>
     request<void>("/api/auth/login", { method: "POST", body: JSON.stringify(input) }),
   logout: () => request<void>("/api/auth/logout", { method: "POST" }),
-  verifyEmail: (token: string) =>
-    request<void>("/api/auth/verify-email", { method: "POST", body: JSON.stringify({ token }) }),
-  forgotPassword: (email: string) =>
-    request<void>("/api/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),
-  resetPassword: (token: string, password: string) =>
-    request<void>("/api/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }),
   deleteAccount: () => request<void>("/api/me", { method: "DELETE" }),
   listConversations: () => request<{ conversations: Conversation[] }>("/api/conversations"),
   createConversation: (input: { title?: string; settings?: LearningSettings }) =>

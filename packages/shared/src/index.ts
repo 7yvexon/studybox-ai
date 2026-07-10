@@ -54,8 +54,12 @@ export interface Conversation {
 
 export interface CurrentUser {
   id: string;
-  email: string;
-  emailVerified: boolean;
+  username: string;
+  realName: string;
+  schoolName: string;
+  grade: number;
+  classNumber: number;
+  studentNumber: number;
   role: "user" | "admin";
   createdAt: string;
 }

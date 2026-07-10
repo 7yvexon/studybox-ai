@@ -14,9 +14,13 @@ import { createId } from "../lib/security.js";
 
 interface UserRow {
   id: string;
-  email: string;
+  username: string;
   password_hash: string;
-  email_verified_at: Date | null;
+  real_name: string;
+  school_name: string;
+  grade: number;
+  class_number: number;
+  student_number: number;
   role: "user" | "admin";
   created_at: Date;
 }
@@ -44,8 +48,12 @@ interface MessageRow {
 
 const mapUser = (row: UserRow): CurrentUser => ({
   id: row.id,
-  email: row.email,
-  emailVerified: Boolean(row.email_verified_at),
+  username: row.username,
+  realName: row.real_name,
+  schoolName: row.school_name,
+  grade: row.grade,
+  classNumber: row.class_number,
+  studentNumber: row.student_number,
   role: row.role,
   createdAt: row.created_at.toISOString()
 });
@@ -71,8 +79,8 @@ const mapMessage = (row: MessageRow): Message => ({
   createdAt: row.created_at.toISOString()
 });
 
-export const findUserByEmail = async (email: string) => {
-  const result = await query<UserRow>("SELECT * FROM users WHERE email = $1", [email]);
+export const findUserByUsername = async (username: string) => {
+  const result = await query<UserRow>("SELECT * FROM users WHERE username = $1", [username]);
   return result.rows[0] ?? null;
 };
 
@@ -94,14 +102,24 @@ export const getCurrentUserBySession = async (tokenHash: string) => {
 };
 
 export const registerUser = async ({
-  email,
+  username,
   passwordHash,
   inviteHash,
+  realName,
+  schoolName,
+  grade,
+  classNumber,
+  studentNumber,
   role
 }: {
-  email: string;
+  username: string;
   passwordHash: string;
   inviteHash: string;
+  realName: string;
+  schoolName: string;
+  grade: number;
+  classNumber: number;
+  studentNumber: number;
   role: "user" | "admin";
 }) =>
   transaction(async (client) => {
@@ -116,18 +134,20 @@ export const registerUser = async ({
       throw new ApiError(400, "INVALID_INVITE_CODE", "초대 코드가 올바르지 않거나 이미 사용되었습니다.");
     }
 
-    const existing = await client.query("SELECT 1 FROM users WHERE email = $1", [email]);
+    const existing = await client.query("SELECT 1 FROM users WHERE username = $1", [username]);
 
     if (existing.rowCount) {
-      throw new ApiError(409, "EMAIL_IN_USE", "이미 가입된 이메일입니다.");
+      throw new ApiError(409, "USERNAME_IN_USE", "이미 사용 중인 아이디입니다.");
     }
 
     const id = createId();
     const result = await client.query<UserRow>(
-      `INSERT INTO users (id, email, password_hash, role)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO users (
+        id, username, password_hash, real_name, school_name, grade, class_number, student_number, role
+      )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [id, email, passwordHash, role]
+      [id, username, passwordHash, realName, schoolName, grade, classNumber, studentNumber, role]
     );
 
     await client.query(
@@ -135,21 +155,8 @@ export const registerUser = async ({
       [id, invite.rows[0].id]
     );
 
-    return result.rows[0];
+    return mapUser(result.rows[0]);
   });
-
-export const markEmailVerified = async (userId: string) => {
-  await query("UPDATE users SET email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = $1", [
-    userId
-  ]);
-};
-
-export const updatePassword = async (userId: string, passwordHash: string) => {
-  await transaction(async (client) => {
-    await client.query("UPDATE users SET password_hash = $1 WHERE id = $2", [passwordHash, userId]);
-    await client.query("DELETE FROM sessions WHERE user_id = $1", [userId]);
-  });
-};
 
 export const deleteUser = async (userId: string) => {
   await query("DELETE FROM users WHERE id = $1", [userId]);
@@ -166,33 +173,6 @@ export const deleteSession = async (tokenHash: string) => {
   await query("DELETE FROM sessions WHERE token_hash = $1", [tokenHash]);
 };
 
-export const createAuthToken = async (
-  userId: string,
-  tokenHash: string,
-  purpose: "verify_email" | "reset_password",
-  expiresAt: Date
-) => {
-  await query("DELETE FROM auth_tokens WHERE user_id = $1 AND purpose = $2", [userId, purpose]);
-  await query(
-    `INSERT INTO auth_tokens (id, user_id, token_hash, purpose, expires_at)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [createId(), userId, tokenHash, purpose, expiresAt]
-  );
-};
-
-export const consumeAuthToken = async (
-  tokenHash: string,
-  purpose: "verify_email" | "reset_password"
-) => {
-  const result = await query<{ user_id: string }>(
-    `DELETE FROM auth_tokens
-     WHERE token_hash = $1 AND purpose = $2 AND expires_at > NOW()
-     RETURNING user_id`,
-    [tokenHash, purpose]
-  );
-
-  return result.rows[0]?.user_id ?? null;
-};
 
 export const createInviteCode = async ({
   codeHash,

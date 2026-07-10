@@ -20,13 +20,7 @@ const configSchema = z.object({
   aiModel: z.string().trim().default(""),
   aiApiKey: z.string().trim().optional(),
   aiTimeoutMs: z.coerce.number().int().min(1000).max(120000).default(30000),
-  mailTransport: z.enum(["console", "smtp"]).default("console"),
-  smtpHost: z.string().trim().default(""),
-  smtpPort: z.coerce.number().int().min(1).max(65535).default(587),
-  smtpUser: z.string().trim().default(""),
-  smtpPassword: z.string().default(""),
-  mailFrom: z.string().min(3).default("StudyBox AI <no-reply@example.com>"),
-  adminEmails: z.string().default(""),
+  adminUserIds: z.string().default(""),
   logLevel: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   cookieSecure: booleanFromEnvironment
 });
@@ -44,13 +38,7 @@ const parsed = configSchema.parse({
   aiModel: process.env.AI_MODEL,
   aiApiKey: process.env.AI_API_KEY,
   aiTimeoutMs: process.env.AI_TIMEOUT_MS,
-  mailTransport: process.env.MAIL_TRANSPORT,
-  smtpHost: process.env.SMTP_HOST,
-  smtpPort: process.env.SMTP_PORT,
-  smtpUser: process.env.SMTP_USER,
-  smtpPassword: process.env.SMTP_PASSWORD,
-  mailFrom: process.env.MAIL_FROM,
-  adminEmails: process.env.ADMIN_EMAILS,
+  adminUserIds: process.env.ADMIN_USER_IDS,
   logLevel: process.env.LOG_LEVEL,
   cookieSecure: process.env.COOKIE_SECURE
 });
@@ -58,10 +46,10 @@ const parsed = configSchema.parse({
 export const config = {
   ...parsed,
   cookieSecure: parsed.cookieSecure || parsed.nodeEnv === "production",
-  adminEmailSet: new Set(
-    parsed.adminEmails
+  adminUserIdSet: new Set(
+    parsed.adminUserIds
       .split(",")
-      .map((email) => email.trim().toLowerCase())
+      .map((username) => username.trim().toLowerCase())
       .filter(Boolean)
   )
 };

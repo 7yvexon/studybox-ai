@@ -34,9 +34,19 @@
   color: var(--color-text-sub);
 }
 
+.account-card__profile {
+  margin-bottom: 12px;
+}
+
 .auth-form {
   display: grid;
   gap: 18px;
+}
+
+.auth-form__school-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .auth-form label {
@@ -227,5 +237,9 @@
   .app-header__actions {
     gap: 10px;
     font-size: 0.76rem;
+  }
+
+  .auth-form__school-numbers {
+    grid-template-columns: 1fr;
   }
 }

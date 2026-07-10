@@ -330,7 +330,7 @@ const LoginPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -342,7 +342,7 @@ const LoginPage = () => {
     setError("");
 
     try {
-      await login(email, password);
+      await login(username, password);
       navigate(next, { replace: true });
     } catch (requestError) {
       setError(getErrorMessage(requestError));
@@ -356,16 +356,15 @@ const LoginPage = () => {
       <section className="auth-card" aria-labelledby="login-title">
         <p className="section-eyebrow">STUDYBOX AI BETA</p>
         <h1 id="login-title">다시 만나서<br />반가워요.</h1>
-        <p className="auth-card__intro">이메일 인증을 완료한 계정으로 로그인해 주세요.</p>
+        <p className="auth-card__intro">가입한 아이디와 비밀번호를 입력해 주세요.</p>
         <form className="auth-form" onSubmit={submit}>
-          <label>이메일<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
+          <label>아이디<input autoComplete="username" minLength={4} maxLength={20} pattern="[a-z0-9_]{4,20}" value={username} onChange={(event) => setUsername(event.target.value.toLowerCase())} required /></label>
           <label>비밀번호<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
           {error && <p className="form-message form-message--error" role="alert">{error}</p>}
           <button className="button button--primary" type="submit" disabled={submitting}>{submitting ? "로그인 중..." : "로그인"}</button>
         </form>
         <div className="auth-links">
           <Link to={`/register${location.search}`}>초대 코드를 받았다면 가입하기</Link>
-          <Link to="/forgot-password">비밀번호를 잊으셨나요?</Link>
         </div>
       </section>
     </AuthFrame>
@@ -373,13 +372,21 @@ const LoginPage = () => {
 };
 
 const RegisterPage = () => {
+  const { register } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [inviteCode, setInviteCode] = useState("");
-  const [message, setMessage] = useState("");
+  const [realName, setRealName] = useState("");
+  const [schoolName, setSchoolName] = useState("");
+  const [grade, setGrade] = useState("");
+  const [classNumber, setClassNumber] = useState("");
+  const [studentNumber, setStudentNumber] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const next = safeNextPath(searchParams.get("next") || location.state?.next);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -387,8 +394,17 @@ const RegisterPage = () => {
     setError("");
 
     try {
-      const result = await api.register({ email, password, inviteCode });
-      setMessage(result.message);
+      await register({
+        username,
+        password,
+        inviteCode,
+        realName,
+        schoolName,
+        grade: Number(grade),
+        classNumber: Number(classNumber),
+        studentNumber: Number(studentNumber)
+      });
+      navigate(next, { replace: true });
     } catch (requestError) {
       setError(getErrorMessage(requestError));
     } finally {
@@ -401,121 +417,22 @@ const RegisterPage = () => {
       <section className="auth-card" aria-labelledby="register-title">
         <p className="section-eyebrow">INVITE-ONLY BETA</p>
         <h1 id="register-title">내 공부를 위한<br />계정을 만들어요.</h1>
-        <p className="auth-card__intro">초대 코드와 이메일 인증이 필요합니다. 비밀번호는 12자 이상으로 설정해 주세요.</p>
+        <p className="auth-card__intro">학교 정보와 아이디를 입력하면 바로 학습을 시작할 수 있어요. 비밀번호는 12자 이상으로 설정해 주세요.</p>
         <form className="auth-form" onSubmit={submit}>
           <label>초대 코드<input autoComplete="off" value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} required /></label>
-          <label>이메일<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
+          <label>아이디<input autoComplete="username" minLength={4} maxLength={20} pattern="[a-z0-9_]{4,20}" value={username} onChange={(event) => setUsername(event.target.value.toLowerCase())} required /></label>
+          <label>이름<input autoComplete="name" maxLength={50} value={realName} onChange={(event) => setRealName(event.target.value)} required /></label>
+          <label>학교명<input autoComplete="organization" maxLength={100} value={schoolName} onChange={(event) => setSchoolName(event.target.value)} required /></label>
+          <div className="auth-form__school-numbers">
+            <label>학년<input type="number" inputMode="numeric" min={1} max={6} value={grade} onChange={(event) => setGrade(event.target.value)} required /></label>
+            <label>반<input type="number" inputMode="numeric" min={1} max={99} value={classNumber} onChange={(event) => setClassNumber(event.target.value)} required /></label>
+            <label>번호<input type="number" inputMode="numeric" min={1} max={99} value={studentNumber} onChange={(event) => setStudentNumber(event.target.value)} required /></label>
+          </div>
           <label>비밀번호<input type="password" autoComplete="new-password" minLength={12} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
-          {message && <p className="form-message" role="status">{message}</p>}
           {error && <p className="form-message form-message--error" role="alert">{error}</p>}
-          <button className="button button--primary" type="submit" disabled={submitting}>{submitting ? "가입 중..." : "가입하고 인증하기"}</button>
+          <button className="button button--primary" type="submit" disabled={submitting}>{submitting ? "가입 중..." : "가입하고 시작하기"}</button>
         </form>
         <div className="auth-links"><Link to={`/login?${searchParams.toString()}`}>이미 계정이 있나요? 로그인</Link></div>
-      </section>
-    </AuthFrame>
-  );
-};
-
-const ForgotPasswordPage = () => {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setSubmitting(true);
-    setError("");
-
-    try {
-      await api.forgotPassword(email);
-      setMessage("가입된 이메일이라면 비밀번호 재설정 링크를 보냈습니다.");
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <AuthFrame>
-      <section className="auth-card" aria-labelledby="forgot-title">
-        <p className="section-eyebrow">ACCOUNT RECOVERY</p>
-        <h1 id="forgot-title">비밀번호를<br />다시 설정해요.</h1>
-        <p className="auth-card__intro">가입할 때 사용한 이메일을 입력해 주세요.</p>
-        <form className="auth-form" onSubmit={submit}>
-          <label>이메일<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-          {message && <p className="form-message" role="status">{message}</p>}
-          {error && <p className="form-message form-message--error" role="alert">{error}</p>}
-          <button className="button button--primary" type="submit" disabled={submitting}>{submitting ? "보내는 중..." : "재설정 링크 보내기"}</button>
-        </form>
-        <div className="auth-links"><Link to="/login">로그인으로 돌아가기</Link></div>
-      </section>
-    </AuthFrame>
-  );
-};
-
-const TokenActionPage = ({ purpose }: { purpose: "verify" | "reset" }) => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const token = searchParams.get("token") || "";
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (purpose !== "verify" || !token) {
-      return;
-    }
-
-    setSubmitting(true);
-    api.verifyEmail(token)
-      .then(() => setMessage("이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다."))
-      .catch((requestError) => setError(getErrorMessage(requestError)))
-      .finally(() => setSubmitting(false));
-  }, [purpose, token]);
-
-  const submitReset = async (event: FormEvent) => {
-    event.preventDefault();
-    setSubmitting(true);
-    setError("");
-
-    try {
-      await api.resetPassword(token, password);
-      setMessage("비밀번호를 변경했습니다. 로그인해 주세요.");
-      window.setTimeout(() => navigate("/login"), 1000);
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (!token) {
-    return <AuthFrame><section className="auth-card"><p className="form-message form-message--error">유효한 링크가 필요합니다.</p></section></AuthFrame>;
-  }
-
-  return (
-    <AuthFrame>
-      <section className="auth-card" aria-labelledby="token-title">
-        <p className="section-eyebrow">STUDYBOX AI</p>
-        <h1 id="token-title">{purpose === "verify" ? "이메일을\n인증하는 중이에요." : "새 비밀번호를\n설정해요."}</h1>
-        {purpose === "verify" ? (
-          <>
-            {submitting && <p className="form-message">이메일을 확인하고 있습니다.</p>}
-            {message && <p className="form-message" role="status">{message}</p>}
-            {error && <p className="form-message form-message--error" role="alert">{error}</p>}
-            {message && <div className="auth-links"><Link to="/login">로그인하기</Link></div>}
-          </>
-        ) : (
-          <form className="auth-form" onSubmit={submitReset}>
-            <label>새 비밀번호<input type="password" autoComplete="new-password" minLength={12} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
-            {message && <p className="form-message" role="status">{message}</p>}
-            {error && <p className="form-message form-message--error" role="alert">{error}</p>}
-            <button className="button button--primary" type="submit" disabled={submitting}>{submitting ? "변경 중..." : "비밀번호 변경"}</button>
-          </form>
-        )}
       </section>
     </AuthFrame>
   );
@@ -551,7 +468,7 @@ const AppHeader = () => {
       <div className="app-header__inner chat-shell">
         <Link className="brand-link" to="/" aria-label="StudyBox AI 처음으로 이동">StudyBox <span>AI</span></Link>
         <div className="app-header__actions">
-          <span>{user?.email}</span>
+          <span>{user?.username}</span>
           <Link to="/account">계정</Link>
           <button className="app-link-button" type="button" onClick={signOut}>로그아웃</button>
         </div>
@@ -855,7 +772,8 @@ const AccountPage = () => {
         <section className="account-card" aria-labelledby="account-title">
           <p className="section-eyebrow">ACCOUNT</p>
           <h1 id="account-title">내 계정</h1>
-          <p className="account-card__intro">{user?.email}</p>
+          <p className="account-card__intro">{user?.username}</p>
+          <p className="account-card__profile form-message">{user ? `${user.realName} · ${user.schoolName} · ${user.grade}학년 ${user.classNumber}반 ${user.studentNumber}번` : ""}</p>
           <p className="form-message">대화 기록은 사용자가 삭제하기 전까지 보존됩니다. 개별 대화는 채팅 화면에서 삭제할 수 있습니다.</p>
           {error && <p className="form-message form-message--error" role="alert">{error}</p>}
           <div className="learning-form__actions"><Link className="button button--primary" to="/app/new">학습 계속하기</Link><button className="button button--secondary" type="button" onClick={removeAccount}>계정 삭제</button></div>
@@ -870,9 +788,6 @@ export const App = () => (
     <Route path="/" element={<LandingPage />} />
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
-    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-    <Route path="/verify-email" element={<TokenActionPage purpose="verify" />} />
-    <Route path="/reset-password" element={<TokenActionPage purpose="reset" />} />
     <Route path="/app/new" element={<RequireAuth><NewConversationPage /></RequireAuth>} />
     <Route path="/app/:conversationId" element={<RequireAuth><ChatPage /></RequireAuth>} />
     <Route path="/account" element={<RequireAuth><AccountPage /></RequireAuth>} />
