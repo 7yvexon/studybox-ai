@@ -146,29 +146,39 @@
 
           <ol class="category-list">
             <li class="category-item" data-category="concept" data-reveal>
-              <p class="category-item__number" aria-hidden="true">01</p>
-              <h3>개념 설명</h3>
-              <p>쉬운 표현 <span>·</span> 예시와 비유 <span>·</span> 핵심 용어 <span>·</span> 한 줄 정리</p>
+              <button class="category-item__button" type="button" data-category-select="concept">
+                <span class="category-item__number" aria-hidden="true">01</span>
+                <span class="category-item__title">개념 설명</span>
+                <span class="category-item__description">쉬운 표현 <span>·</span> 예시와 비유 <span>·</span> 핵심 용어 <span>·</span> 한 줄 정리</span>
+              </button>
             </li>
             <li class="category-item" data-category="solve" data-reveal>
-              <p class="category-item__number" aria-hidden="true">02</p>
-              <h3>문제 풀이</h3>
-              <p>조건 분석 <span>·</span> 필요한 공식 <span>·</span> 단계별 풀이 <span>·</span> 실수 점검</p>
+              <button class="category-item__button" type="button" data-category-select="solve">
+                <span class="category-item__number" aria-hidden="true">02</span>
+                <span class="category-item__title">문제 풀이</span>
+                <span class="category-item__description">조건 분석 <span>·</span> 필요한 공식 <span>·</span> 단계별 풀이 <span>·</span> 실수 점검</span>
+              </button>
             </li>
             <li class="category-item" data-category="summary" data-reveal>
-              <p class="category-item__number" aria-hidden="true">03</p>
-              <h3>핵심 요약</h3>
-              <p>중요 정보 <span>·</span> 핵심 키워드 <span>·</span> 내용 구조 <span>·</span> 빠른 복습</p>
+              <button class="category-item__button" type="button" data-category-select="summary">
+                <span class="category-item__number" aria-hidden="true">03</span>
+                <span class="category-item__title">핵심 요약</span>
+                <span class="category-item__description">중요 정보 <span>·</span> 핵심 키워드 <span>·</span> 내용 구조 <span>·</span> 빠른 복습</span>
+              </button>
             </li>
             <li class="category-item" data-category="exam" data-reveal>
-              <p class="category-item__number" aria-hidden="true">04</p>
-              <h3>시험 대비</h3>
-              <p>암기 포인트 <span>·</span> 예상 문제 <span>·</span> 정답과 해설 <span>·</span> 오답 확인</p>
+              <button class="category-item__button" type="button" data-category-select="exam">
+                <span class="category-item__number" aria-hidden="true">04</span>
+                <span class="category-item__title">시험 대비</span>
+                <span class="category-item__description">암기 포인트 <span>·</span> 예상 문제 <span>·</span> 정답과 해설 <span>·</span> 오답 확인</span>
+              </button>
             </li>
             <li class="category-item" data-category="performance" data-reveal>
-              <p class="category-item__number" aria-hidden="true">05</p>
-              <h3>수행평가</h3>
-              <p>조건 분석 <span>·</span> 주제 추천 <span>·</span> 개요 작성 <span>·</span> 기준 점검</p>
+              <button class="category-item__button" type="button" data-category-select="performance">
+                <span class="category-item__number" aria-hidden="true">05</span>
+                <span class="category-item__title">수행평가</span>
+                <span class="category-item__description">조건 분석 <span>·</span> 주제 추천 <span>·</span> 개요 작성 <span>·</span> 기준 점검</span>
+              </button>
             </li>
           </ol>
         </div>
@@ -220,14 +230,113 @@
 
       <section id="learning-app" class="learning-app" tabindex="-1" aria-labelledby="learning-app-title">
         <div class="container">
-          <div class="learning-app__placeholder" data-learning-placeholder data-reveal>
-            <p class="section-eyebrow">READY WHEN YOU ARE</p>
-            <h2 id="learning-app-title">다음 화면에서,<br />진짜 학습이 시작됩니다.</h2>
-            <p id="learning-app-description">
-              모드 선택부터 난이도, 답변 길이, 질문 입력까지.<br />
-              한 흐름으로 이어지는 학습 공간을 준비하고 있습니다.
-            </p>
-            <p class="learning-app__status"><span aria-hidden="true"></span> Coming soon</p>
+          <div class="learning-app__content" data-reveal>
+            <header class="learning-app__header">
+              <p class="section-eyebrow">STUDY YOUR WAY</p>
+              <h2 id="learning-app-title">질문은 그대로.<br /><span>답변은 내 방식대로.</span></h2>
+              <p id="learning-app-description">오늘 필요한 학습 방식을 고르고 질문을 입력하세요.</p>
+            </header>
+
+            <div class="learning-workspace">
+              <form class="learning-form" data-learning-form novalidate>
+                <fieldset class="learning-fieldset">
+                  <legend>학습 모드</legend>
+                  <div class="learning-option-grid learning-option-grid--modes">
+                    <label class="learning-option">
+                      <input type="radio" name="mode" value="concept" checked />
+                      <span>개념 설명</span>
+                    </label>
+                    <label class="learning-option">
+                      <input type="radio" name="mode" value="solve" />
+                      <span>문제 풀이</span>
+                    </label>
+                    <label class="learning-option">
+                      <input type="radio" name="mode" value="summary" />
+                      <span>핵심 요약</span>
+                    </label>
+                    <label class="learning-option">
+                      <input type="radio" name="mode" value="exam" />
+                      <span>시험 대비</span>
+                    </label>
+                    <label class="learning-option">
+                      <input type="radio" name="mode" value="performance" />
+                      <span>수행평가</span>
+                    </label>
+                  </div>
+                </fieldset>
+
+                <div class="learning-form__settings">
+                  <fieldset class="learning-fieldset">
+                    <legend>학습 수준</legend>
+                    <div class="learning-option-grid">
+                      <label class="learning-option">
+                        <input type="radio" name="level" value="basic" />
+                        <span>기초</span>
+                      </label>
+                      <label class="learning-option">
+                        <input type="radio" name="level" value="standard" checked />
+                        <span>보통</span>
+                      </label>
+                      <label class="learning-option">
+                        <input type="radio" name="level" value="advanced" />
+                        <span>심화</span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <fieldset class="learning-fieldset">
+                    <legend>답변 길이</legend>
+                    <div class="learning-option-grid">
+                      <label class="learning-option">
+                        <input type="radio" name="responseLength" value="short" />
+                        <span>짧게</span>
+                      </label>
+                      <label class="learning-option">
+                        <input type="radio" name="responseLength" value="standard" checked />
+                        <span>보통</span>
+                      </label>
+                      <label class="learning-option">
+                        <input type="radio" name="responseLength" value="detailed" />
+                        <span>자세히</span>
+                      </label>
+                    </div>
+                  </fieldset>
+                </div>
+
+                <div class="learning-question">
+                  <label for="learning-question">무엇을 공부할까요?</label>
+                  <textarea
+                    id="learning-question"
+                    name="question"
+                    rows="5"
+                    maxlength="500"
+                    placeholder="예: 광합성 과정을 쉽게 설명해 줘"
+                    aria-describedby="learning-question-hint learning-question-error"
+                  ></textarea>
+                  <p id="learning-question-hint">최대 500자까지 입력할 수 있습니다.</p>
+                  <p id="learning-question-error" class="learning-error" hidden></p>
+                </div>
+
+                <div class="learning-form__actions">
+                  <button class="button button--primary" type="submit">학습 답변 만들기</button>
+                  <button class="button button--secondary" type="reset">초기화</button>
+                </div>
+                <p class="learning-disclaimer">체험용 템플릿 답변입니다. 실제 AI 연결 기능은 준비 중입니다.</p>
+              </form>
+
+              <div class="learning-result">
+                <p class="learning-live" data-learning-live role="status"></p>
+                <section class="learning-response" data-learning-response aria-labelledby="learning-response-title" hidden>
+                  <header class="learning-response__header">
+                    <p class="learning-response__eyebrow">STUDY RESPONSE</p>
+                    <p class="learning-response__meta" data-response-meta></p>
+                    <h3 id="learning-response-title" data-response-title tabindex="-1"></h3>
+                    <p data-response-summary></p>
+                  </header>
+                  <div class="learning-response__content" data-response-content></div>
+                </section>
+              </div>
+            </div>
           </div>
         </div>
       </section>
