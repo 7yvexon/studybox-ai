@@ -6,7 +6,6 @@ export const passwordSchema = z.string().min(12).max(128);
 export const registerSchema = z.object({
   username: usernameSchema,
   password: passwordSchema,
-  inviteCode: z.string().trim().min(8).max(120),
   realName: z.string().trim().min(1).max(50),
   schoolName: z.string().trim().min(1).max(100),
   grade: z.coerce.number().int().min(1).max(6),

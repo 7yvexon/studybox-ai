@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import type { LearningSettings } from "@studybox/shared";
+import { defaultLearningSettings, normalizeAnswerLevel, type LearningSettings } from "@studybox/shared";
 import cookieParser from "cookie-parser";
 import express, { type NextFunction, type Request, type Response } from "express";
 import rateLimit from "express-rate-limit";
@@ -12,7 +12,6 @@ import { z } from "zod";
 import { createChatProvider } from "./ai/provider.js";
 import { loginSchema, registerSchema } from "./auth/validation.js";
 import { config } from "./config.js";
-import { query } from "./db/index.js";
 import {
   appendMessages,
   createConversation,
@@ -26,23 +25,26 @@ import {
   listConversations,
   registerUser,
   reserveUsage,
-  updateConversationTitle
-} from "./db/repository.js";
+  updateConversationTitle,
+  checkStorageReady
+} from "./storage/index.js";
 import { errorHandler, notFound, parseBody, ApiError } from "./lib/http.js";
 import { createOpaqueToken, hashPassword, hashToken, verifyPassword } from "./lib/security.js";
 import { clearSessionCookie, requireAuth, requireSameOrigin, setSessionCookie } from "./middleware/auth.js";
 
+const answerLevelSchema = z
+  .enum(["middle1", "middle2", "middle3", "high1", "high2", "high3", "basic", "standard", "advanced"])
+  .transform((value) => normalizeAnswerLevel(value) || defaultLearningSettings.level) as unknown as z.ZodType<
+    LearningSettings["level"]
+  >;
+
 const learningSettingsSchema = z.object({
   mode: z.enum(["concept", "solve", "summary", "exam", "performance"]),
-  level: z.enum(["basic", "standard", "advanced"]),
+  level: answerLevelSchema,
   responseLength: z.enum(["short", "standard", "detailed"])
 });
 
-const defaultSettings: LearningSettings = {
-  mode: "concept",
-  level: "standard",
-  responseLength: "standard"
-};
+const defaultSettings: LearningSettings = defaultLearningSettings;
 
 const conversationSchema = z.object({
   title: z.string().trim().min(1).max(120).optional(),
@@ -108,14 +110,19 @@ export const createApp = () => {
   app.use(cookieParser());
 
   app.get("/api/health", (_request, response) => {
-    response.json({ status: "ok", provider: provider.name, timestamp: new Date().toISOString() });
+    response.json({
+      status: "ok",
+      provider: provider.name,
+      storage: config.storageMode,
+      timestamp: new Date().toISOString()
+    });
   });
 
   app.get(
     "/api/ready",
     asyncRoute(async (_request, response) => {
-      await query("SELECT 1");
-      response.json({ status: "ready" });
+      await checkStorageReady();
+      response.json({ status: "ready", storage: config.storageMode });
     })
   );
 
@@ -128,7 +135,6 @@ export const createApp = () => {
       const user = await registerUser({
         username: input.username,
         passwordHash: await hashPassword(input.password),
-        inviteHash: hashToken(input.inviteCode),
         realName: input.realName,
         schoolName: input.schoolName,
         grade: input.grade,

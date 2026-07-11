@@ -6,13 +6,14 @@ import type {
   Message,
   MessageRole
 } from "@studybox/shared";
+import { defaultLearningSettings, normalizeLearningSettings } from "@studybox/shared";
 import type { PoolClient } from "pg";
 
 import { transaction, query } from "./index.js";
 import { ApiError } from "../lib/http.js";
 import { createId } from "../lib/security.js";
 
-interface UserRow {
+export interface UserRow {
   id: string;
   username: string;
   password_hash: string;
@@ -28,7 +29,7 @@ interface UserRow {
 interface ConversationRow {
   id: string;
   title: string;
-  settings: LearningSettings;
+  settings: unknown;
   created_at: Date;
   updated_at: Date;
   last_message_preview: string | null;
@@ -39,7 +40,7 @@ interface MessageRow {
   conversation_id: string;
   role: MessageRole;
   content: string;
-  settings: LearningSettings | null;
+  settings: unknown | null;
   response: GeneratedReply | null;
   provider: string | null;
   model: string | null;
@@ -61,7 +62,7 @@ const mapUser = (row: UserRow): CurrentUser => ({
 const mapConversation = (row: ConversationRow): Conversation => ({
   id: row.id,
   title: row.title,
-  settings: row.settings,
+  settings: normalizeLearningSettings(row.settings) || defaultLearningSettings,
   createdAt: row.created_at.toISOString(),
   updatedAt: row.updated_at.toISOString(),
   lastMessagePreview: row.last_message_preview
@@ -72,14 +73,14 @@ const mapMessage = (row: MessageRow): Message => ({
   conversationId: row.conversation_id,
   role: row.role,
   content: row.content,
-  settings: row.settings,
+  settings: row.settings ? normalizeLearningSettings(row.settings) : null,
   response: row.response,
   provider: row.provider,
   model: row.model,
   createdAt: row.created_at.toISOString()
 });
 
-export const findUserByUsername = async (username: string) => {
+export const findUserByUsername = async (username: string): Promise<UserRow | null> => {
   const result = await query<UserRow>("SELECT * FROM users WHERE username = $1", [username]);
   return result.rows[0] ?? null;
 };
@@ -104,7 +105,6 @@ export const getCurrentUserBySession = async (tokenHash: string) => {
 export const registerUser = async ({
   username,
   passwordHash,
-  inviteHash,
   realName,
   schoolName,
   grade,
@@ -114,7 +114,6 @@ export const registerUser = async ({
 }: {
   username: string;
   passwordHash: string;
-  inviteHash: string;
   realName: string;
   schoolName: string;
   grade: number;
@@ -123,17 +122,6 @@ export const registerUser = async ({
   role: "user" | "admin";
 }) =>
   transaction(async (client) => {
-    const invite = await client.query<{ id: string }>(
-      `SELECT id FROM invite_codes
-       WHERE code_hash = $1 AND used_by IS NULL AND (expires_at IS NULL OR expires_at > NOW())
-       FOR UPDATE`,
-      [inviteHash]
-    );
-
-    if (!invite.rows[0]) {
-      throw new ApiError(400, "INVALID_INVITE_CODE", "초대 코드가 올바르지 않거나 이미 사용되었습니다.");
-    }
-
     const existing = await client.query("SELECT 1 FROM users WHERE username = $1", [username]);
 
     if (existing.rowCount) {
@@ -148,11 +136,6 @@ export const registerUser = async ({
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [id, username, passwordHash, realName, schoolName, grade, classNumber, studentNumber, role]
-    );
-
-    await client.query(
-      "UPDATE invite_codes SET used_by = $1, used_at = NOW() WHERE id = $2",
-      [id, invite.rows[0].id]
     );
 
     return mapUser(result.rows[0]);

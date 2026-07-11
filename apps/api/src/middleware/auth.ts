@@ -1,7 +1,7 @@
 import type { CookieOptions, NextFunction, Request, Response } from "express";
 
 import { config } from "../config.js";
-import { getCurrentUserBySession } from "../db/repository.js";
+import { getCurrentUserBySession } from "../storage/index.js";
 import { ApiError } from "../lib/http.js";
 import { hashToken } from "../lib/security.js";
 
@@ -55,7 +55,16 @@ export const requireSameOrigin = (request: Request, _response: Response, next: N
     return;
   }
 
-  if (origin !== new URL(config.appOrigin).origin) {
+  const requestedOrigin = new URL(origin);
+  const configuredOrigin = new URL(config.appOrigin);
+  const loopbackHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+  const isDevelopmentLoopback =
+    config.nodeEnv !== "production" &&
+    loopbackHosts.has(requestedOrigin.hostname) &&
+    loopbackHosts.has(configuredOrigin.hostname) &&
+    requestedOrigin.port === configuredOrigin.port;
+
+  if (requestedOrigin.origin !== configuredOrigin.origin && !isDevelopmentLoopback) {
     next(new ApiError(403, "ORIGIN_NOT_ALLOWED", "허용되지 않은 요청입니다."));
     return;
   }

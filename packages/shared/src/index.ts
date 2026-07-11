@@ -6,11 +6,13 @@ export const learningModes = [
   "performance"
 ] as const;
 
-export const learningLevels = ["basic", "standard", "advanced"] as const;
+export const answerLevels = ["middle1", "middle2", "middle3", "high1", "high2", "high3"] as const;
+export const learningLevels = answerLevels;
 export const responseLengths = ["short", "standard", "detailed"] as const;
 
 export type LearningMode = (typeof learningModes)[number];
-export type LearningLevel = (typeof learningLevels)[number];
+export type AnswerLevel = (typeof answerLevels)[number];
+export type LearningLevel = AnswerLevel;
 export type ResponseLength = (typeof responseLengths)[number];
 export type MessageRole = "user" | "assistant";
 
@@ -83,8 +85,51 @@ export interface GenerateReplyResult {
 
 export const defaultLearningSettings: LearningSettings = {
   mode: "concept",
-  level: "standard",
+  level: "middle2",
   responseLength: "standard"
+};
+
+const legacyAnswerLevels: Record<string, AnswerLevel> = {
+  basic: "middle1",
+  standard: "middle2",
+  advanced: "high2"
+};
+
+export const normalizeAnswerLevel = (value: unknown): AnswerLevel | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  if (answerLevels.includes(value as AnswerLevel)) {
+    return value as AnswerLevel;
+  }
+
+  return legacyAnswerLevels[value] || null;
+};
+
+export const normalizeLearningSettings = (value: unknown): LearningSettings | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const settings = value as Partial<LearningSettings> & { level?: unknown };
+  const level = normalizeAnswerLevel(settings.level);
+
+  if (
+    !settings.mode ||
+    !learningModes.includes(settings.mode) ||
+    !level ||
+    !settings.responseLength ||
+    !responseLengths.includes(settings.responseLength)
+  ) {
+    return null;
+  }
+
+  return {
+    mode: settings.mode,
+    level,
+    responseLength: settings.responseLength
+  };
 };
 
 export const isLearningSettings = (value: unknown): value is LearningSettings => {

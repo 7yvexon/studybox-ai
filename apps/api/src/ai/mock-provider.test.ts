@@ -7,7 +7,7 @@ describe("MockChatProvider", () => {
     const provider = new MockChatProvider();
     const result = await provider.generateReply({
       question: "광합성 과정을 설명해 줘",
-      settings: { mode: "concept", level: "basic", responseLength: "short" },
+      settings: { mode: "concept", level: "middle1", responseLength: "short" },
       conversation: []
     });
 

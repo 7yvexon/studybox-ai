@@ -5,7 +5,6 @@ import { loginSchema, registerSchema } from "./validation.js";
 const validRegistration = {
   username: "Student_01",
   password: "secure-password",
-  inviteCode: "school-beta-2026",
   realName: "홍길동",
   schoolName: "스터디고등학교",
   grade: 2,

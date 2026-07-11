@@ -42,7 +42,6 @@ export const api = {
   register: (input: {
     username: string;
     password: string;
-    inviteCode: string;
     realName: string;
     schoolName: string;
     grade: number;

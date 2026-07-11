@@ -10,7 +10,6 @@ interface AuthContextValue {
   register: (input: {
     username: string;
     password: string;
-    inviteCode: string;
     realName: string;
     schoolName: string;
     grade: number;

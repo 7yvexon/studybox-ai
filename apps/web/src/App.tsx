@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   Link,
   Navigate,
@@ -11,6 +11,7 @@ import {
 } from "react-router-dom";
 import {
   defaultLearningSettings,
+  normalizeAnswerLevel,
   type Conversation,
   type LearningMode,
   type LearningSettings,
@@ -28,7 +29,14 @@ const settingsLabels = {
     exam: "시험 대비",
     performance: "수행평가"
   },
-  level: { basic: "기초", standard: "보통", advanced: "심화" },
+  level: {
+    middle1: "중학교 1학년",
+    middle2: "중학교 2학년",
+    middle3: "중학교 3학년",
+    high1: "고등학교 1학년",
+    high2: "고등학교 2학년",
+    high3: "고등학교 3학년"
+  },
   responseLength: { short: "짧게", standard: "보통", detailed: "자세히" }
 } as const;
 
@@ -131,12 +139,115 @@ const previewResponses: Record<
   }
 };
 
-const pendingQuestionKey = "studybox-pending-question";
-
 const getErrorMessage = (error: unknown) =>
   error instanceof ApiClientError ? error.message : "잠시 후 다시 시도해 주세요.";
 
 const LoadingPage = () => <main className="loading-page">불러오는 중입니다.</main>;
+
+const BrandLogo = () => (
+  <>
+    <span className="brand-mark" aria-hidden="true"><i /><i /></span>
+    <span className="brand-name">StudyBox <strong>AI</strong></span>
+  </>
+);
+
+const MovingSurface = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (navigator.userAgent.includes("jsdom")) {
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    let context: CanvasRenderingContext2D | null = null;
+    try {
+      context = canvas.getContext("2d");
+    } catch {
+      return;
+    }
+    if (!context) {
+      return;
+    }
+
+    const image = new Image();
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let frame = 0;
+    let width = 0;
+    let height = 0;
+    let pixelRatio = 1;
+
+    const resize = () => {
+      const bounds = canvas.getBoundingClientRect();
+      width = Math.max(1, bounds.width);
+      height = Math.max(1, bounds.height);
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(width * pixelRatio);
+      canvas.height = Math.round(height * pixelRatio);
+    };
+
+    const draw = (time = 0) => {
+      if (!image.naturalWidth || !image.naturalHeight) {
+        return;
+      }
+
+      const camera = time / 1000;
+      const cover = Math.max(width / image.naturalWidth, height / image.naturalHeight);
+      const scale = 1.1 + Math.sin(camera * 0.34) * 0.025;
+      const drawWidth = image.naturalWidth * cover * scale;
+      const drawHeight = image.naturalHeight * cover * scale;
+      const x = (width - drawWidth) / 2 + Math.sin(camera * 0.24) * width * 0.024;
+      const y = (height - drawHeight) / 2 + Math.cos(camera * 0.19) * height * 0.018;
+
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      context.clearRect(0, 0, width, height);
+      context.filter = "saturate(1.08) contrast(1.05)";
+      context.globalAlpha = 1;
+      context.drawImage(image, x, y, drawWidth, drawHeight);
+
+      context.save();
+      context.globalAlpha = 0.16;
+      context.globalCompositeOperation = "screen";
+      context.filter = "blur(5px) saturate(1.22)";
+      context.translate(width / 2, height / 2);
+      context.rotate(Math.sin(camera * 0.16) * 0.012);
+      context.drawImage(
+        image,
+        -drawWidth / 2 + Math.cos(camera * 0.28) * 24,
+        -drawHeight / 2 + Math.sin(camera * 0.22) * 18,
+        drawWidth,
+        drawHeight
+      );
+      context.restore();
+      context.filter = "none";
+
+      if (!reducedMotion.matches) {
+        frame = window.requestAnimationFrame(draw);
+      }
+    };
+
+    const start = () => {
+      resize();
+      draw();
+    };
+
+    image.addEventListener("load", start, { once: true });
+    image.src = "/images/studybox-cinematic-surface.png";
+    window.addEventListener("resize", resize);
+
+    return () => {
+      image.removeEventListener("load", start);
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
+  return <canvas className="moving-surface" ref={canvasRef} aria-hidden="true" />;
+};
 
 const SiteHeader = ({ tone = "dark" }: { tone?: "dark" | "light" }) => {
   const { user, loading } = useAuth();
@@ -145,12 +256,12 @@ const SiteHeader = ({ tone = "dark" }: { tone?: "dark" | "light" }) => {
     <header className={`site-header site-header--${tone}`}>
       <div className="site-header__inner container">
         <Link className="brand-link" to="/" aria-label="StudyBox AI 처음으로 이동">
-          StudyBox <span>AI</span>
+          <BrandLogo />
         </Link>
         <nav className="primary-navigation" aria-label="주요 메뉴">
-          <a href="/#story">학습 모드</a>
-          <a href="/#categories">AI 미리보기</a>
-          <a href="/#how-it-works">사용 방법</a>
+          <a href="/#story">답변 설계</a>
+          <a href="/#categories">답변 미리보기</a>
+          <a href="/#learning-app">질문 시작</a>
         </nav>
         {!loading && (
           <Link className="header-start" to={user ? "/app/new" : "/login?next=/app/new"}>
@@ -167,7 +278,7 @@ const Footer = () => (
     <div className="site-footer__inner container">
       <div>
         <Link className="brand-link" to="/">
-          StudyBox <span>AI</span>
+          <BrandLogo />
         </Link>
         <p>질문은 하나, 공부는 내 방식대로.</p>
       </div>
@@ -223,7 +334,7 @@ const LearningPreview = ({
         </div>
         <article className="product-preview__answer" aria-live="polite">
           <p className="product-preview__eyebrow">
-            {settingsLabels.mode[mode]} · 보통 · 보통 길이
+            {settingsLabels.mode[mode]} · 중학교 2학년 · 보통 길이
           </p>
           <h3>{response.title}</h3>
           <p className="product-preview__summary">{response.summary}</p>
@@ -244,74 +355,196 @@ const LearningPreview = ({
 const LandingPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [question, setQuestion] = useState("");
   const [settings, setSettings] = useState<LearningSettings>(defaultLearningSettings);
-  const [storyIndex, setStoryIndex] = useState(0);
-  const [storyEnhanced, setStoryEnhanced] = useState(false);
-  const [lightHeader, setLightHeader] = useState(false);
 
   useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updateMotion = () => setStoryEnhanced(!media.matches && "IntersectionObserver" in window);
-
-    updateMotion();
-    media.addEventListener("change", updateMotion);
-    return () => media.removeEventListener("change", updateMotion);
-  }, []);
-
-  useEffect(() => {
-    if (!storyEnhanced) {
+    const flow = document.querySelector<HTMLElement>(".mode-flow");
+    if (!flow) {
       return;
     }
 
-    const steps = Array.from(document.querySelectorAll<HTMLElement>("[data-story-step]"));
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const activeEntry = entries.find((entry) => entry.isIntersecting);
-        if (activeEntry) {
-          setStoryIndex(Number((activeEntry.target as HTMLElement).dataset.storyStep || 0));
-        }
-      },
-      { rootMargin: "-46% 0px -46% 0px", threshold: 0 }
-    );
-
-    steps.forEach((step) => observer.observe(step));
-    return () => observer.disconnect();
-  }, [storyEnhanced]);
-
-  useEffect(() => {
+    const root = document.documentElement;
+    const hero = document.querySelector<HTMLElement>(".scroll-scene--hero");
+    const workspace = document.querySelector<HTMLElement>(".scroll-scene--workspace");
+    const scenes = Array.from(document.querySelectorAll<HTMLElement>(".scroll-scene"));
+    const items = Array.from(flow.querySelectorAll<HTMLElement>(".mode-flow__item"));
+    const progressLinks = Array.from(flow.querySelectorAll<HTMLElement>(".mode-flow__progress a"));
     let animationFrame = 0;
+    let observer: IntersectionObserver | undefined;
+    let previousScrollY = window.scrollY;
 
-    const updateHeaderTone = () => {
+    if ("IntersectionObserver" in window) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            entry.target.classList.toggle("is-in-view", entry.isIntersecting);
+          });
+        },
+        { threshold: 0.16, rootMargin: "0px 0px -8% 0px" }
+      );
+      items.forEach((item) => observer?.observe(item));
+    } else {
+      items.forEach((item) => item.classList.add("is-in-view"));
+    }
+
+    const updateScrollEffects = () => {
       window.cancelAnimationFrame(animationFrame);
       animationFrame = window.requestAnimationFrame(() => {
-        const lightSection = document.getElementById("categories");
-        if (lightSection) {
-          setLightHeader(window.scrollY >= lightSection.offsetTop - 52);
+        const viewportHeight = window.innerHeight || 1;
+        const scrollDelta = window.scrollY - previousScrollY;
+        const scrollVelocity = Math.min(1, Math.abs(scrollDelta) / 42);
+
+        if (Math.abs(scrollDelta) > 0.2) {
+          root.style.setProperty("--scroll-direction", scrollDelta > 0 ? "1" : "-1");
         }
+        root.style.setProperty("--scroll-velocity", scrollVelocity.toFixed(3));
+        previousScrollY = window.scrollY;
+        const scrollRange = Math.max(1, root.scrollHeight - viewportHeight);
+        const pageProgress = Math.min(1, Math.max(0, window.scrollY / scrollRange));
+        const flowRect = flow.getBoundingClientRect();
+        const flowProgress = Math.min(
+          1,
+          Math.max(0, (viewportHeight - flowRect.top) / (flowRect.height + viewportHeight))
+        );
+
+        root.style.setProperty("--page-progress", pageProgress.toFixed(4));
+
+        scenes.forEach((scene) => {
+          const rect = scene.getBoundingClientRect();
+          const sceneProgress = Math.min(
+            1,
+            Math.max(0, (viewportHeight - rect.top) / (viewportHeight + rect.height))
+          );
+          const sceneCenter = Math.min(
+            1,
+            Math.max(-1, (rect.top + rect.height / 2 - viewportHeight / 2) / viewportHeight)
+          );
+
+          scene.style.setProperty("--scene-progress", sceneProgress.toFixed(4));
+          scene.style.setProperty("--scene-center", sceneCenter.toFixed(4));
+          scene.style.setProperty("--scene-offset", `${(sceneCenter * 112).toFixed(2)}px`);
+          scene.style.setProperty("--scene-tilt", `${(sceneCenter * 7).toFixed(2)}deg`);
+          scene.style.setProperty("--scene-scale", (1 - Math.abs(sceneCenter) * 0.022).toFixed(4));
+          scene.classList.toggle("is-scene-active", rect.top < viewportHeight * 0.82 && rect.bottom > viewportHeight * 0.18);
+        });
+
+        if (hero) {
+          hero.dataset.heroPhase = "home";
+        }
+
+        if (workspace) {
+          const workspaceRect = workspace.getBoundingClientRect();
+          const workspaceTravel = Math.max(1, workspaceRect.height - viewportHeight);
+          const workspaceProgress = Math.min(1, Math.max(0, -workspaceRect.top / workspaceTravel));
+          const workspaceReveal = Math.min(1, Math.max(0, (workspaceProgress - 0.06) / 0.68));
+          const workspaceContent = Math.min(1, Math.max(0, (workspaceProgress - 0.48) / 0.42));
+
+          workspace.style.setProperty("--workspace-progress", workspaceProgress.toFixed(4));
+          workspace.style.setProperty("--workspace-reveal", workspaceReveal.toFixed(4));
+          workspace.style.setProperty("--workspace-wordmark-opacity", (1 - Math.min(1, workspaceReveal * 1.08)).toFixed(4));
+          workspace.style.setProperty("--workspace-wordmark-scale", (1 - workspaceReveal * 0.4).toFixed(4));
+          workspace.style.setProperty("--workspace-wordmark-y", `${(workspaceReveal * -118).toFixed(2)}px`);
+          workspace.style.setProperty("--workspace-media-opacity", (0.12 + workspaceReveal * 0.82).toFixed(4));
+          workspace.style.setProperty("--workspace-media-scale", (1.18 - workspaceReveal * 0.18).toFixed(4));
+          workspace.style.setProperty("--workspace-media-y", `${(workspaceReveal * -46).toFixed(2)}px`);
+          workspace.style.setProperty("--workspace-shade-opacity", (0.92 - workspaceReveal * 0.72).toFixed(4));
+          workspace.style.setProperty("--workspace-surface-opacity", Math.pow(workspaceReveal, 1.65).toFixed(4));
+          workspace.style.setProperty("--workspace-surface-scale", (1.18 - workspaceReveal * 0.12).toFixed(4));
+          workspace.style.setProperty("--workspace-surface-y", "0px");
+          workspace.style.setProperty("--workspace-surface-z", "0px");
+          workspace.style.setProperty("--workspace-surface-rotate", "0deg");
+          workspace.style.setProperty("--workspace-content-opacity", workspaceContent.toFixed(4));
+          workspace.style.setProperty("--workspace-content-y", `${((1 - workspaceContent) * 54).toFixed(2)}px`);
+          workspace.style.setProperty("--workspace-content-z", `${((1 - workspaceContent) * -150).toFixed(2)}px`);
+          workspace.style.setProperty("--workspace-panel-scale", (0.78 + workspaceContent * 0.22).toFixed(4));
+          workspace.style.setProperty("--workspace-panel-y", `${((1 - workspaceContent) * 74).toFixed(2)}px`);
+          workspace.style.setProperty("--workspace-panel-z", `${((1 - workspaceContent) * -260).toFixed(2)}px`);
+          workspace.style.setProperty("--workspace-panel-rotate", `${((1 - workspaceContent) * 9).toFixed(2)}deg`);
+          workspace.dataset.workspacePhase = workspaceReveal < 0.03 ? "wordmark" : workspaceContent < 0.96 ? "reveal" : "workspace";
+        }
+
+        flow.style.setProperty("--flow-progress", flowProgress.toFixed(4));
+        flow.style.setProperty("--flow-shift", `${flowProgress * 300}px`);
+        flow.style.setProperty("--flow-shift-reverse", `${flowProgress * -230}px`);
+        flow.classList.toggle("is-flow-active", flowRect.top < viewportHeight * 0.7 && flowRect.bottom > viewportHeight * 0.3);
+
+        let activeIndex = 0;
+        let closestDistance = Number.POSITIVE_INFINITY;
+
+        items.forEach((item, index) => {
+          const rect = item.getBoundingClientRect();
+          const centerOffset = Math.min(
+            1,
+            Math.max(-1, (rect.top + rect.height / 2 - viewportHeight / 2) / viewportHeight)
+          );
+          const sceneProgress = Math.min(
+            1,
+            Math.max(0, (viewportHeight - rect.top) / (viewportHeight + rect.height))
+          );
+          const direction = index % 2 === 0 ? 1 : -1;
+          const distance = Math.abs(centerOffset);
+
+          item.style.setProperty("--card-shift", `${centerOffset * -72}px`);
+          item.style.setProperty("--card-rotate", `${centerOffset * direction * 8}deg`);
+          item.style.setProperty("--card-scale", (1 - distance * 0.055).toFixed(4));
+          item.style.setProperty("--copy-shift", `${centerOffset * -42}px`);
+          item.style.setProperty("--fx-shift", `${(sceneProgress - 0.5) * 320}px`);
+          item.style.setProperty("--card-glow", (1 - distance * 0.72).toFixed(4));
+          item.style.setProperty("--scene-progress", sceneProgress.toFixed(4));
+
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            activeIndex = index;
+          }
+        });
+
+        progressLinks.forEach((link, index) => link.classList.toggle("is-active", index === activeIndex));
       });
     };
 
-    updateHeaderTone();
-    window.addEventListener("scroll", updateHeaderTone, { passive: true });
+    updateScrollEffects();
+    window.addEventListener("scroll", updateScrollEffects, { passive: true });
+    window.addEventListener("resize", updateScrollEffects);
+
     return () => {
+      observer?.disconnect();
       window.cancelAnimationFrame(animationFrame);
-      window.removeEventListener("scroll", updateHeaderTone);
+      window.removeEventListener("scroll", updateScrollEffects);
+      window.removeEventListener("resize", updateScrollEffects);
+      root.style.removeProperty("--page-progress");
+      root.style.removeProperty("--scroll-direction");
+      root.style.removeProperty("--scroll-velocity");
     };
   }, []);
 
-  const startLearning = (event?: FormEvent) => {
-    event?.preventDefault();
+  useEffect(() => {
+    const elements = Array.from(document.querySelectorAll<HTMLElement>(".page-reveal"));
+
+    if (!("IntersectionObserver" in window)) {
+      elements.forEach((element) => element.classList.add("is-visible"));
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          entry.target.classList.toggle("is-visible", entry.isIntersecting);
+        });
+      },
+      { threshold: 0.14, rootMargin: "0px 0px -8% 0px" }
+    );
+
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, []);
+
+  const startLearning = () => {
     const query = new URLSearchParams({
       mode: settings.mode,
       level: settings.level,
       responseLength: settings.responseLength
     }).toString();
     const destination = `/app/new?${query}`;
-
-    if (question.trim()) {
-      window.sessionStorage.setItem(pendingQuestionKey, question.trim());
-    }
 
     navigate(user ? destination : `/login?next=${encodeURIComponent(destination)}`);
   };
@@ -323,96 +556,164 @@ const LandingPage = () => {
       <a className="skip-link" href="#main-content">
         본문으로 건너뛰기
       </a>
-      <SiteHeader tone={lightHeader ? "light" : "dark"} />
-      <main id="main-content" tabIndex={-1}>
-        <section id="hero" className="hero" aria-labelledby="hero-title">
-          <div className="hero__inner container">
-            <div className="hero__content">
-              <p className="hero__kicker">STUDYBOX AI</p>
-              <h1 id="hero-title">
-                같은 질문.<br />
-                <span>완전히 다른 공부.</span>
-              </h1>
-              <p className="hero__lead">
-                개념은 쉽게. 풀이는 끝까지. 시험은 핵심만.
-                <br />목적을 고르면, AI의 답변 방식이 달라집니다.
-              </p>
-              <div className="hero__actions" aria-label="StudyBox AI 바로가기">
-                <button className="button button--primary" type="button" onClick={() => startLearning()}>
-                  학습 시작하기
-                </button>
-                <a className="text-link" href="#story">
-                  어떻게 다른지 보기
+      <SiteHeader tone="light" />
+      <div className="site-scroll-progress" aria-hidden="true"><span /></div>
+      <main id="main-content" className="landing-page" tabIndex={-1}>
+        <section id="hero" className="hero hero--home scroll-scene scroll-scene--hero" aria-labelledby="home-hero-title">
+          <div className="hero-stage">
+            <div className="hero-home container">
+              <p className="hero-home__eyebrow">STUDYBOX AI</p>
+              <h1 id="home-hero-title">오늘은 무엇을<br /><span>공부해 볼까요?</span></h1>
+              <p className="hero-home__description">학습 목적과 답변 수준을 고르면, 지금 필요한 방식으로 바로 시작합니다.</p>
+              <button className="hero-home__prompt" type="button" onClick={startLearning}>
+                <span>무엇을 공부하고 싶나요?</span>
+                <b aria-hidden="true">↗</b>
+              </button>
+              <div className="hero-home__links" aria-label="학습 방식 미리보기">
+                <a href="#story">개념 설명</a>
+                <a href="#categories">문제 풀이</a>
+                <a href="#learning-app">학습 공간</a>
+              </div>
+            </div>
+            <div className="hero-haze" aria-hidden="true"><span /><span /><span /><span /></div>
+            <div className="hero-grid-map" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
+            <p className="hero__opening-wordmark" aria-hidden="true">StudyBox <strong>AI</strong></p>
+            <div className="hero__inner hero__inner--wordmark container">
+              <p className="hero-announcement"><span>NEW</span> StudyBox Reasoning이 학습 목적을 더 정확하게 이해합니다.</p>
+              <div className="hero-grid">
+                <div className="hero__content">
+                  <h1 id="hero-title">StudyBox <span>AI</span></h1>
+                  <p className="hero__tagline">답을 넘어, 공부의 본질로.</p>
+                  <div className="hero-actions">
+                    <button className="hero-action-card" type="button" onClick={() => startLearning()}>
+                      <strong>Start now</strong>
+                      <span>무료로 StudyBox AI를 시작하고<br />목적에 맞는 답변을 경험하세요.</span>
+                    </button>
+                    <a className="hero-action-card" href="#categories">
+                      <strong>AI preview</strong>
+                      <span>같은 질문이 학습 모드에 따라<br />어떻게 달라지는지 확인하세요.</span>
+                    </a>
+                  </div>
+                </div>
+                <a className="hero-feature-card" href="#story">
+                  <div className="hero-feature-card__rays" aria-hidden="true">
+                    {Array.from({ length: 9 }, (_, index) => <span style={{ transform: `rotate(${index * 11 - 44}deg)` }} key={index} />)}
+                  </div>
+                  <p>StudyBox Reasoning</p>
+                  <h2>질문을 넘어<br />학습의 방향으로</h2>
+                  <span>Explore the modes →</span>
                 </a>
               </div>
             </div>
-            <div className="hero__preview">
-              <LearningPreview mode={settings.mode} onModeChange={selectMode} compact />
-            </div>
-            <a className="scroll-cue" href="#story">아래로 스크롤</a>
           </div>
         </section>
 
-        <section id="story" className={`story-section${storyEnhanced ? " is-enhanced" : ""}`} aria-labelledby="story-title">
-          <h2 id="story-title" className="visually-hidden">
-            StudyBox AI의 다섯 가지 학습 모드
-          </h2>
-          <div className="story-sticky">
-            <div className="story-frame container">
-              <header className="story-topline">
-                <p>하나의 AI · 다섯 학습 모드</p>
-                <p>목적에 맞는 답변</p>
-              </header>
-              <div className="story-panels">
-                {learningStories.map((story, index) => {
-                  const [firstLine, secondLine] = story.title.split("\n");
-                  return (
-                    <article
-                      className={`story-panel${index === storyIndex ? " is-active" : ""}${index < storyIndex ? " is-past" : ""}`}
-                      key={story.mode}
-                    >
-                      <p className="story-panel__meta">{story.code}</p>
-                      <h3>{firstLine}<br /><strong>{secondLine}</strong></h3>
-                      <p>{story.description}</p>
-                    </article>
-                  );
-                })}
-              </div>
-              <div className="story-progress" aria-hidden="true">
-                <div className="story-progress__rail"><span style={{ transform: `scaleX(${(storyIndex + 1) / learningStories.length})` }} /></div>
-                <p>{String(storyIndex + 1).padStart(2, "0")} <span>/ 05</span></p>
-              </div>
-            </div>
+        <section id="story" className="mode-flow scroll-scene scroll-scene--modes" aria-labelledby="story-title">
+          <div className="mode-flow__background" aria-hidden="true">
+            <span /><span /><span /><span /><span /><span />
           </div>
-          <div className="story-steps" aria-hidden="true">
-            {learningStories.map((story, index) => <span data-story-step={index} key={story.mode} />)}
-          </div>
-        </section>
-
-        <section id="categories" className="section product-section" aria-labelledby="categories-title">
-          <div className="container">
-            <header className="section-heading">
-              <p className="section-eyebrow">실제 답변 미리보기</p>
-              <h2 id="categories-title">같은 AI가 아니라.<br />내 목적에 맞는 AI.</h2>
-              <p>학습 모드를 눌러 같은 질문이 어떤 구조와 깊이의 답변으로 바뀌는지 확인해 보세요.</p>
+          <nav className="mode-flow__progress" aria-label="학습 모드 진행 상황">
+            <span className="mode-flow__progress-track" aria-hidden="true"><i /></span>
+            {learningStories.map((story, index) => (
+              <a href={`#mode-${story.mode}`} aria-label={settingsLabels.mode[story.mode]} key={story.mode}>
+                {String(index + 1).padStart(2, "0")}
+              </a>
+            ))}
+          </nav>
+          <div className="mode-flow__inner container">
+            <header className="mode-flow__heading page-reveal page-reveal--left">
+              <p className="section-eyebrow">STUDYBOX AI</p>
+              <h2 id="story-title">질문 하나로,<br /><span>공부는 달라집니다.</span></h2>
+              <p>답을 받는 순간부터, 생각은 나만의 학습 흐름이 됩니다.</p>
             </header>
-            <LearningPreview mode={settings.mode} onModeChange={selectMode} />
+
+            <div className="mode-flow__list">
+              {learningStories.map((story, index) => {
+                const response = previewResponses[story.mode];
+                const [firstLine, secondLine] = story.title.split("\n");
+
+                return (
+                  <article id={`mode-${story.mode}`} className={`mode-flow__item mode-flow__item--${story.mode}`} key={story.mode}>
+                    <div className="mode-flow__item-fx" aria-hidden="true">
+                      <b>{String(index + 1).padStart(2, "0")}</b>
+                      <span /><span /><span />
+                    </div>
+                    <div className="mode-flow__copy">
+                      <p className="mode-flow__meta">
+                        <span>{String(index + 1).padStart(2, "0")}</span>
+                        {settingsLabels.mode[story.mode]}
+                      </p>
+                      <h3>{firstLine}<br /><strong>{secondLine}</strong></h3>
+                      <p className="mode-flow__description">{story.description}</p>
+                      <div className="mode-flow__outline" aria-label="답변 구성">
+                        {response.sections.map((section) => <span key={section.title}>{section.title}</span>)}
+                      </div>
+                    </div>
+
+                    <div className="flow-response-shell">
+                      <div className="flow-response" aria-label={`${settingsLabels.mode[story.mode]} 답변 예시`}>
+                        <div className="flow-response__bar">
+                          <span><BrandLogo /></span>
+                          <p>{settingsLabels.mode[story.mode]} 답변 생성</p>
+                          <i aria-hidden="true" />
+                        </div>
+                        <div className="flow-response__question">
+                          <span>나</span>
+                          <p>{response.question}</p>
+                        </div>
+                        <div className="flow-response__answer">
+                          <span className="flow-response__ai">AI</span>
+                          <div>
+                            <p className="flow-response__meta">{settingsLabels.mode[story.mode]} · 중학교 2학년</p>
+                            <h4>{response.title}</h4>
+                            <p className="flow-response__summary">{response.summary}</p>
+                            <div className="flow-response__sections">
+                              {response.sections.map((section, sectionIndex) => (
+                                <div key={section.title}>
+                                  <span>{String(sectionIndex + 1).padStart(2, "0")}</span>
+                                  <p><strong>{section.title}</strong>{section.content}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           </div>
         </section>
 
-        <section id="how-it-works" className="section process-section" aria-labelledby="how-it-works-title">
+        <section id="categories" className="section product-section scroll-scene scroll-scene--product" aria-labelledby="categories-title">
+          <div className="product-section__kinetic" aria-hidden="true"><span /><span /><span /></div>
           <div className="container">
-            <header className="section-heading">
-              <p className="section-eyebrow">설정은 짧게 · 집중은 길게</p>
-              <h2 id="how-it-works-title">설정은 짧게.<br />집중은 바로.</h2>
+            <header className="section-heading page-reveal page-reveal--left">
+              <p className="section-eyebrow">ANSWER PREVIEW</p>
+              <h2 id="categories-title">같은 질문.<br />다르게 이어지는 생각.</h2>
+              <p>답변의 시작점과 밀도, 흐름이 목적에 맞게 달라집니다.</p>
+            </header>
+            <div className="page-reveal page-reveal--product">
+              <LearningPreview mode={settings.mode} onModeChange={selectMode} />
+            </div>
+          </div>
+        </section>
+
+        <section id="how-it-works" className="section process-section scroll-scene scroll-scene--process" aria-labelledby="how-it-works-title">
+          <p className="process-section__word" aria-hidden="true">REASONING</p>
+          <div className="container">
+            <header className="section-heading page-reveal page-reveal--left">
+              <p className="section-eyebrow">STUDYBOX FLOW</p>
+              <h2 id="how-it-works-title">질문은 쌓이고,<br />생각은 남습니다.</h2>
             </header>
             <ol className="process-list">
               {[
-                ["오늘 필요한 모드 선택", "설명, 풀이, 요약, 시험, 수행평가 중 하나를 고릅니다."],
-                ["난이도와 길이 조절", "내 수준과 남은 시간에 맞게 답변의 깊이를 정합니다."],
-                ["질문하면 끝", "답변의 구성은 StudyBox AI가 선택한 모드에 맞춥니다."]
+                ["목적 감지", "선택한 학습 모드와 질문의 의도를 함께 읽습니다."],
+                ["답변 설계", "수준과 길이에 맞춰 설명의 순서와 정보 밀도를 조절합니다."],
+                ["학습 가능한 답", "지금 이해하고, 풀고, 기억할 수 있는 구조로 답합니다."]
               ].map(([title, content], index) => (
-                <li className="process-item" key={title}>
+                <li className={`process-item page-reveal page-reveal--delay-${index + 1}`} key={title}>
                   <p className="process-item__number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</p>
                   <div><h3>{title}</h3><p>{content}</p></div>
                 </li>
@@ -421,29 +722,46 @@ const LandingPage = () => {
           </div>
         </section>
 
-        <section id="learning-app" className="learning-app" aria-labelledby="learning-app-title">
-          <div className="container">
-            <div className="learning-app__content">
-              <header className="learning-app__header">
-                <p className="section-eyebrow">내 방식대로 공부하기</p>
-                <h2 id="learning-app-title">질문은 그대로.<br /><span>답변은 내 방식대로.</span></h2>
-                <p>초대 코드 베타 서비스입니다. 로그인 후 내 대화에 안전하게 저장됩니다.</p>
-              </header>
-              <div className="learning-workspace learning-workspace--start">
-                <form className="learning-form" onSubmit={startLearning}>
-                  <SettingsFields settings={settings} onChange={setSettings} prefix="landing" />
-                  <div className="learning-question">
-                    <label htmlFor="learning-question">무엇을 공부할까요?</label>
-                    <textarea id="learning-question" rows={5} maxLength={2000} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="예: 광합성 과정을 쉽게 설명해 줘" />
-                    <p>최대 2,000자까지 입력할 수 있습니다.</p>
-                  </div>
-                  <div className="learning-form__actions">
-                    <button className="button button--primary" type="submit">AI 질문 시작하기</button>
-                    <button className="button button--secondary" type="button" onClick={() => { setQuestion(""); setSettings(defaultLearningSettings); }}>초기화</button>
-                  </div>
-                  <p className="learning-disclaimer">현재 배포 뼈대는 모의 AI 답변으로 동작합니다. 실제 제공자는 운영 환경에서 연결합니다.</p>
-                </form>
+        <section id="learning-app" className="workspace-invite scroll-scene scroll-scene--workspace" aria-labelledby="learning-app-title">
+          <div className="workspace-invite__stage">
+            <div className="workspace-invite__film" aria-hidden="true">
+              <div className="workspace-invite__film-media"><MovingSurface /></div>
+              <p className="workspace-invite__wordmark">StudyBox <span>AI</span></p>
+              <div className="workspace-invite__surface" />
+            </div>
+            <div className="workspace-invite__lines" aria-hidden="true"><span /><span /><span /></div>
+            <div className="container">
+            <header className="workspace-invite__header page-reveal page-reveal--left">
+              <p className="section-eyebrow">YOUR LEARNING SPACE</p>
+              <h2 id="learning-app-title">StudyBox <span>AI</span></h2>
+              <p>질문을 쌓고, 생각을 정리하고, 나만의 학습 흐름을 이어갑니다.</p>
+              <button className="button button--primary workspace-invite__button" type="button" onClick={startLearning}>
+                질문 시작하기 <span aria-hidden="true">↗</span>
+              </button>
+            </header>
+
+            <div className="workspace-preview-stage page-reveal page-reveal--product">
+              <div className="workspace-preview" aria-hidden="true">
+                <aside className="workspace-preview__sidebar">
+                  <div><BrandLogo /></div>
+                  <span>＋ 새 학습</span>
+                  <nav><i /><i /><i /><i /></nav>
+                  <footer><b>김</b><p>김학생<br /><small>스터디중학교</small></p></footer>
+                </aside>
+                <div className="workspace-preview__main">
+                  <header>
+                    <p>새 학습 대화</p>
+                    <div><span>개념 설명</span><span>중학교 2학년</span><span>보통 길이</span></div>
+                  </header>
+                  <section>
+                    <p>STUDYBOX AI</p>
+                    <h3>무엇을 공부해 볼까요?</h3>
+                    <span>학습 목적과 답변 수준에 맞춰 대화를 시작합니다.</span>
+                  </section>
+                  <footer><p>궁금한 내용을 입력하세요</p><b>↑</b></footer>
+                </div>
               </div>
+            </div>
             </div>
           </div>
         </section>
@@ -453,65 +771,99 @@ const LandingPage = () => {
   );
 };
 
-const SettingsFields = ({
+const WorkspaceSettings = ({
   settings,
-  onChange,
-  prefix
+  onChange
 }: {
   settings: LearningSettings;
   onChange: (settings: LearningSettings) => void;
-  prefix: string;
 }) => {
   const change = <K extends keyof LearningSettings>(key: K, value: LearningSettings[K]) =>
     onChange({ ...settings, [key]: value });
 
   return (
-    <>
-      <fieldset className="learning-fieldset">
-        <legend>학습 모드</legend>
-        <div className="learning-option-grid learning-option-grid--modes">
+    <div className="workspace-controls" aria-label="현재 답변 설정">
+      <label>
+        <span>학습 모드</span>
+        <select
+          aria-label="학습 모드"
+          value={settings.mode}
+          onChange={(event) => change("mode", event.target.value as LearningSettings["mode"])}
+        >
           {(Object.entries(settingsLabels.mode) as Array<[LearningMode, string]>).map(([value, label]) => (
-            <label className="learning-option" key={value}>
-              <input type="radio" name={`${prefix}-mode`} value={value} checked={settings.mode === value} onChange={() => change("mode", value)} />
-              <span>{label}</span>
-            </label>
+            <option value={value} key={value}>{label}</option>
           ))}
-        </div>
-      </fieldset>
-      <div className="learning-form__settings">
-        <fieldset className="learning-fieldset">
-          <legend>학습 수준</legend>
-          <div className="learning-option-grid">
-            {(Object.entries(settingsLabels.level) as Array<[LearningSettings["level"], string]>).map(([value, label]) => (
-              <label className="learning-option" key={value}>
-                <input type="radio" name={`${prefix}-level`} value={value} checked={settings.level === value} onChange={() => change("level", value)} />
-                <span>{label}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        <fieldset className="learning-fieldset">
-          <legend>답변 길이</legend>
-          <div className="learning-option-grid">
-            {(Object.entries(settingsLabels.responseLength) as Array<[LearningSettings["responseLength"], string]>).map(([value, label]) => (
-              <label className="learning-option" key={value}>
-                <input type="radio" name={`${prefix}-length`} value={value} checked={settings.responseLength === value} onChange={() => change("responseLength", value)} />
-                <span>{label}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-      </div>
-    </>
+        </select>
+      </label>
+      <label>
+        <span>답변 수준</span>
+        <select
+          aria-label="답변 수준"
+          value={settings.level}
+          onChange={(event) => change("level", event.target.value as LearningSettings["level"])}
+        >
+          {(Object.entries(settingsLabels.level) as Array<[LearningSettings["level"], string]>).map(([value, label]) => (
+            <option value={value} key={value}>{label}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <span>답변 길이</span>
+        <select
+          aria-label="답변 길이"
+          value={settings.responseLength}
+          onChange={(event) => change("responseLength", event.target.value as LearningSettings["responseLength"])}
+        >
+          {(Object.entries(settingsLabels.responseLength) as Array<[LearningSettings["responseLength"], string]>).map(([value, label]) => (
+            <option value={value} key={value}>{label}</option>
+          ))}
+        </select>
+      </label>
+    </div>
   );
 };
 
-const AuthFrame = ({ children }: { children: ReactNode }) => (
-  <>
-    <SiteHeader tone="light" />
-    <main className="auth-page">{children}</main>
-  </>
-);
+const AuthFrame = ({ children, variant }: { children: ReactNode; variant: "login" | "register" }) => {
+  const isLogin = variant === "login";
+
+  return (
+    <>
+      <SiteHeader tone="light" />
+      <main className={`auth-page auth-page--${variant}`}>
+        <div className="auth-ambient" aria-hidden="true">
+          <span /><span /><span /><span /><span /><span />
+          <i />
+        </div>
+        <div className={`auth-shell auth-shell--${variant}`}>
+          <section className="auth-story" aria-label={isLogin ? "학습 이어하기" : "학습 환경 만들기"}>
+            <p className="auth-story__eyebrow">{isLogin ? "YOUR STUDY, CONTINUED" : "PERSONAL STUDY SETUP"}</p>
+            <h2>{isLogin ? <>멈춘 곳에서,<br /><strong>생각을 이어가세요.</strong></> : <>처음 한 번의 설정으로,<br /><strong>답변의 기준이 달라집니다.</strong></>}</h2>
+            <p className="auth-story__description">
+              {isLogin
+                ? "지난 대화와 학습 설정을 그대로 불러와 바로 다음 질문을 시작합니다."
+                : "학교 정보와 계정을 연결해 나에게 맞는 AI 학습 작업 공간을 만듭니다."}
+            </p>
+            {isLogin ? (
+              <div className="auth-activity" aria-hidden="true">
+                <header><span><i /> 최근 학습</span><b>이어하기</b></header>
+                <div className="auth-activity__question"><span>나</span><p>광합성에서 빛이 꼭 필요한 이유는?</p></div>
+                <div className="auth-activity__answer"><span>AI</span><p><b>빛은 에너지원이에요.</b> 식물이 포도당을 만드는 과정의 출발점부터 이어서 살펴볼게요.</p></div>
+                <footer><i /><i /><i /><span>답변 생성 완료</span></footer>
+              </div>
+            ) : (
+              <ol className="auth-setup" aria-label="가입 단계">
+                <li className="is-current"><span>01</span><div><b>계정 정보</b><p>나만의 StudyBox 아이디 준비</p></div></li>
+                <li><span>02</span><div><b>학생 정보</b><p>학교와 현재 학년 설정</p></div></li>
+                <li><span>03</span><div><b>학습 시작</b><p>나만의 대화 기록 만들기</p></div></li>
+              </ol>
+            )}
+          </section>
+          {children}
+        </div>
+      </main>
+    </>
+  );
+};
 
 const safeNextPath = (value: string | null) =>
   value && value.startsWith("/app") && !value.startsWith("//") ? value : "/app/new";
@@ -543,19 +895,21 @@ const LoginPage = () => {
   };
 
   return (
-    <AuthFrame>
+    <AuthFrame variant="login">
       <section className="auth-card" aria-labelledby="login-title">
+        <div className="auth-card__topline"><span><i /> 학습 공간 연결됨</span><Link to="/">홈으로</Link></div>
         <p className="section-eyebrow">STUDYBOX AI BETA</p>
         <h1 id="login-title">다시 만나서<br />반가워요.</h1>
-        <p className="auth-card__intro">가입한 아이디와 비밀번호를 입력해 주세요.</p>
+        <p className="auth-card__intro">계정에 로그인하고 계속하던 공부를 이어가세요.</p>
         <form className="auth-form" onSubmit={submit}>
-          <label>아이디<input autoComplete="username" minLength={4} maxLength={20} pattern="[a-z0-9_]{4,20}" value={username} onChange={(event) => setUsername(event.target.value.toLowerCase())} required /></label>
-          <label>비밀번호<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+          <label><span>아이디</span><input autoComplete="username" minLength={4} maxLength={20} pattern="[a-z0-9_]{4,20}" placeholder="studybox_id" value={username} onChange={(event) => setUsername(event.target.value.toLowerCase())} required /></label>
+          <label><span>비밀번호</span><input type="password" autoComplete="current-password" placeholder="비밀번호를 입력하세요" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
           {error && <p className="form-message form-message--error" role="alert">{error}</p>}
-          <button className="button button--primary" type="submit" disabled={submitting}>{submitting ? "로그인 중..." : "로그인"}</button>
+          <button className="button button--primary auth-submit" type="submit" disabled={submitting}><span>{submitting ? "학습 공간을 여는 중..." : "로그인하고 이어가기"}</span><b aria-hidden="true">→</b></button>
         </form>
         <div className="auth-links">
-          <Link to={`/register${location.search}`}>초대 코드를 받았다면 가입하기</Link>
+          <span>아직 StudyBox 계정이 없나요?</span>
+          <Link to={`/register${location.search}`}>새 계정 만들기 <b aria-hidden="true">↗</b></Link>
         </div>
       </section>
     </AuthFrame>
@@ -569,7 +923,6 @@ const RegisterPage = () => {
   const [searchParams] = useSearchParams();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
   const [realName, setRealName] = useState("");
   const [schoolName, setSchoolName] = useState("");
   const [grade, setGrade] = useState("");
@@ -588,7 +941,6 @@ const RegisterPage = () => {
       await register({
         username,
         password,
-        inviteCode,
         realName,
         schoolName,
         grade: Number(grade),
@@ -604,26 +956,37 @@ const RegisterPage = () => {
   };
 
   return (
-    <AuthFrame>
+    <AuthFrame variant="register">
       <section className="auth-card" aria-labelledby="register-title">
-        <p className="section-eyebrow">INVITE-ONLY BETA</p>
+        <div className="auth-card__topline"><span><i /> BETA ACCESS</span><Link to="/">홈으로</Link></div>
+        <p className="section-eyebrow">STUDYBOX AI BETA</p>
         <h1 id="register-title">내 공부를 위한<br />계정을 만들어요.</h1>
-        <p className="auth-card__intro">학교 정보와 아이디를 입력하면 바로 학습을 시작할 수 있어요. 비밀번호는 12자 이상으로 설정해 주세요.</p>
+        <p className="auth-card__intro">아이디와 학교 정보를 입력하면 바로 학습을 시작할 수 있어요. 비밀번호는 12자 이상으로 설정해 주세요.</p>
         <form className="auth-form" onSubmit={submit}>
-          <label>초대 코드<input autoComplete="off" value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} required /></label>
-          <label>아이디<input autoComplete="username" minLength={4} maxLength={20} pattern="[a-z0-9_]{4,20}" value={username} onChange={(event) => setUsername(event.target.value.toLowerCase())} required /></label>
-          <label>이름<input autoComplete="name" maxLength={50} value={realName} onChange={(event) => setRealName(event.target.value)} required /></label>
-          <label>학교명<input autoComplete="organization" maxLength={100} value={schoolName} onChange={(event) => setSchoolName(event.target.value)} required /></label>
-          <div className="auth-form__school-numbers">
-            <label>학년<input type="number" inputMode="numeric" min={1} max={6} value={grade} onChange={(event) => setGrade(event.target.value)} required /></label>
-            <label>반<input type="number" inputMode="numeric" min={1} max={99} value={classNumber} onChange={(event) => setClassNumber(event.target.value)} required /></label>
-            <label>번호<input type="number" inputMode="numeric" min={1} max={99} value={studentNumber} onChange={(event) => setStudentNumber(event.target.value)} required /></label>
+          <div className="auth-form__group">
+            <div className="auth-form__group-title"><span>01</span><p><b>계정 정보</b><small>학습 공간에 사용할 로그인 아이디</small></p></div>
+            <label><span>아이디</span><input autoComplete="username" minLength={4} maxLength={20} pattern="[a-z0-9_]{4,20}" placeholder="영문 소문자, 숫자, 밑줄 4-20자" value={username} onChange={(event) => setUsername(event.target.value.toLowerCase())} required /></label>
           </div>
-          <label>비밀번호<input type="password" autoComplete="new-password" minLength={12} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+          <div className="auth-form__group">
+            <div className="auth-form__group-title"><span>02</span><p><b>학생 정보</b><small>학교 학습 환경에 맞춘 기본 설정</small></p></div>
+            <div className="auth-form__student-grid">
+              <label><span>이름</span><input autoComplete="name" maxLength={50} placeholder="이름" value={realName} onChange={(event) => setRealName(event.target.value)} required /></label>
+              <label><span>학교명</span><input autoComplete="organization" maxLength={100} placeholder="학교 이름" value={schoolName} onChange={(event) => setSchoolName(event.target.value)} required /></label>
+            </div>
+            <div className="auth-form__school-numbers">
+              <label><span>학년</span><input type="number" inputMode="numeric" min={1} max={6} placeholder="2" value={grade} onChange={(event) => setGrade(event.target.value)} required /></label>
+              <label><span>반</span><input type="number" inputMode="numeric" min={1} max={99} placeholder="3" value={classNumber} onChange={(event) => setClassNumber(event.target.value)} required /></label>
+              <label><span>번호</span><input type="number" inputMode="numeric" min={1} max={99} placeholder="12" value={studentNumber} onChange={(event) => setStudentNumber(event.target.value)} required /></label>
+            </div>
+          </div>
+          <div className="auth-form__group auth-form__group--last">
+            <div className="auth-form__group-title"><span>03</span><p><b>비밀번호</b><small>12자 이상으로 안전하게 설정</small></p></div>
+            <label><span>새 비밀번호</span><input type="password" autoComplete="new-password" minLength={12} placeholder="12자 이상 입력하세요" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+          </div>
           {error && <p className="form-message form-message--error" role="alert">{error}</p>}
-          <button className="button button--primary" type="submit" disabled={submitting}>{submitting ? "가입 중..." : "가입하고 시작하기"}</button>
+          <button className="button button--primary auth-submit" type="submit" disabled={submitting}><span>{submitting ? "학습 공간을 만드는 중..." : "내 학습 공간 만들기"}</span><b aria-hidden="true">→</b></button>
         </form>
-        <div className="auth-links"><Link to={`/login?${searchParams.toString()}`}>이미 계정이 있나요? 로그인</Link></div>
+        <div className="auth-links"><span>이미 계정이 있나요?</span><Link to={`/login?${searchParams.toString()}`}>로그인해서 이어가기 <b aria-hidden="true">↗</b></Link></div>
       </section>
     </AuthFrame>
   );
@@ -657,7 +1020,7 @@ const AppHeader = () => {
   return (
     <header className="app-header">
       <div className="app-header__inner chat-shell">
-        <Link className="brand-link" to="/" aria-label="StudyBox AI 처음으로 이동">StudyBox <span>AI</span></Link>
+        <Link className="brand-link" to="/" aria-label="StudyBox AI 처음으로 이동"><BrandLogo /></Link>
         <div className="app-header__actions">
           <span>{user?.username}</span>
           <Link to="/account">계정</Link>
@@ -675,7 +1038,7 @@ const NewConversationPage = () => {
   const settings = useMemo<LearningSettings>(
     () => ({
       mode: (searchParams.get("mode") as LearningSettings["mode"]) || defaultLearningSettings.mode,
-      level: (searchParams.get("level") as LearningSettings["level"]) || defaultLearningSettings.level,
+      level: normalizeAnswerLevel(searchParams.get("level")) || defaultLearningSettings.level,
       responseLength:
         (searchParams.get("responseLength") as LearningSettings["responseLength"]) ||
         defaultLearningSettings.responseLength
@@ -745,6 +1108,7 @@ const ChatMessage = ({ message }: { message: Message }) => {
 };
 
 const ChatPage = () => {
+  const { user, logout } = useAuth();
   const { conversationId } = useParams();
   const navigate = useNavigate();
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -757,7 +1121,7 @@ const ChatPage = () => {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const refreshList = async () => {
     const result = await api.listConversations();
@@ -793,19 +1157,6 @@ const ChatPage = () => {
   useEffect(() => {
     loadConversation();
   }, [conversationId]);
-
-  useEffect(() => {
-    if (loading || sending || messages.length || !conversationId) {
-      return;
-    }
-
-    const pendingQuestion = window.sessionStorage.getItem(pendingQuestionKey);
-
-    if (pendingQuestion) {
-      setQuestion(pendingQuestion);
-      window.sessionStorage.removeItem(pendingQuestionKey);
-    }
-  }, [loading, sending, messages.length, conversationId]);
 
   const sendMessage = async (event?: FormEvent) => {
     event?.preventDefault();
@@ -861,6 +1212,11 @@ const ChatPage = () => {
     }
   };
 
+  const signOut = async () => {
+    await logout();
+    navigate("/", { replace: true });
+  };
+
   if (loading) {
     return <><AppHeader /><LoadingPage /></>;
   }
@@ -872,77 +1228,122 @@ const ChatPage = () => {
   return (
     <>
       <a className="skip-link" href="#chat-main">대화 영역으로 건너뛰기</a>
-      <AppHeader />
-      <main id="chat-main" className="chat-app chat-app--react" tabIndex={-1}>
-        <div className="chat-app__layout chat-shell">
-          <aside className={`chat-settings${settingsOpen ? " is-open" : ""}`} aria-labelledby="chat-settings-title">
-            <button
-              className="chat-settings__toggle"
-              type="button"
-              aria-expanded={settingsOpen}
-              aria-controls="chat-settings-content"
-              onClick={() => setSettingsOpen((current) => !current)}
-            >
-              <span>학습 설정</span>
-              <span>{settingsOpen ? "닫기" : "열기"}</span>
-            </button>
-            <div className="chat-settings__content" id="chat-settings-content">
-              <div className="chat-settings__header">
-                <div>
-                  <p className="chat-settings__eyebrow">STUDY SETTINGS</p>
-                  <h1 id="chat-settings-title">내 학습 방식</h1>
-                </div>
-              </div>
-              <SettingsFields settings={settings} onChange={setSettings} prefix="chat" />
-              <button className="chat-new-button chat-settings__new" type="button" onClick={() => navigate(`/app/new?${new URLSearchParams({ mode: settings.mode, level: settings.level, responseLength: settings.responseLength }).toString()}`)}>새 대화</button>
-              <nav className="conversation-list" aria-label="내 대화 목록">
-                {conversations.map((item) => (
-                  <Link className={`conversation-list__item${item.id === conversation.id ? " is-active" : ""}`} to={`/app/${item.id}`} key={item.id}>
-                    <strong>{item.title}</strong>
-                    <span>{item.lastMessagePreview || "아직 메시지가 없습니다."}</span>
-                  </Link>
-                ))}
-              </nav>
-              <button className="app-link-button chat-settings__delete" type="button" onClick={deleteCurrentConversation}>현재 대화 삭제</button>
-            </div>
-          </aside>
+      <main id="chat-main" className="workspace-app" tabIndex={-1}>
+        <aside
+          id="workspace-sidebar"
+          className={`workspace-sidebar${sidebarOpen ? " is-open" : ""}`}
+          aria-label="학습 작업 공간 메뉴"
+        >
+          <header className="workspace-sidebar__header">
+            <Link className="brand-link" to="/" aria-label="StudyBox AI 처음으로 이동"><BrandLogo /></Link>
+            <button className="workspace-sidebar__close" type="button" aria-label="작업 공간 메뉴 닫기" onClick={() => setSidebarOpen(false)}>×</button>
+          </header>
 
-          <section className="chat-workspace" aria-labelledby="chat-title">
-            <div className="chat-conversation">
-              <div className="chat-conversation__title">
-                {isEditingTitle ? (
-                  <form onSubmit={saveTitle}><label className="visually-hidden" htmlFor="conversation-title">대화 제목</label><input id="conversation-title" className="conversation-title-input" value={title} onChange={(event) => setTitle(event.target.value)} autoFocus /><button className="chat-send-button" type="submit">저장</button></form>
-                ) : (
-                  <button className="app-link-button" type="button" onClick={() => setIsEditingTitle(true)}>{conversation.title}</button>
-                )}
-              </div>
-              <div className="chat-conversation__inner">
-                {!messages.length && (
-                  <div className="chat-empty-state">
-                    <p className="chat-empty-state__eyebrow">STUDYBOX AI CHAT</p>
-                    <h2 id="chat-title">무엇을 더 공부해 볼까요?</h2>
-                    <p>선택한 학습 방식에 맞춰 다음 질문부터 답변을 이어갑니다.</p>
+          <button
+            className="workspace-new-button"
+            type="button"
+            onClick={() => navigate(`/app/new?${new URLSearchParams({ mode: settings.mode, level: settings.level, responseLength: settings.responseLength }).toString()}`)}
+          >
+            <span aria-hidden="true">＋</span> 새 학습
+          </button>
+
+          <p className="workspace-sidebar__label">대화</p>
+          <nav className="conversation-list" aria-label="내 대화 목록">
+            {conversations.map((item) => (
+              <Link
+                className={`conversation-list__item${item.id === conversation.id ? " is-active" : ""}`}
+                to={`/app/${item.id}`}
+                onClick={() => setSidebarOpen(false)}
+                key={item.id}
+              >
+                <strong>{item.title}</strong>
+                <span>{item.lastMessagePreview || "아직 메시지가 없습니다."}</span>
+              </Link>
+            ))}
+          </nav>
+
+          <button className="workspace-delete-button" type="button" onClick={deleteCurrentConversation}>현재 대화 삭제</button>
+
+          <footer className="workspace-sidebar__footer">
+            <Link to="/account" className="workspace-user">
+              <span>{user?.realName?.slice(0, 1) || "S"}</span>
+              <p><strong>{user?.realName || user?.username}</strong><small>{user?.schoolName}</small></p>
+            </Link>
+            <button type="button" onClick={signOut}>로그아웃</button>
+          </footer>
+        </aside>
+
+        {sidebarOpen && <button className="workspace-sidebar-overlay" type="button" aria-label="작업 공간 메뉴 닫기" onClick={() => setSidebarOpen(false)} />}
+
+        <section className="chat-workspace workspace-main" aria-labelledby="chat-title">
+          <header className="workspace-toolbar">
+            <button
+              className="workspace-menu-button"
+              type="button"
+              aria-label="작업 공간 메뉴 열기"
+              aria-expanded={sidebarOpen}
+              aria-controls="workspace-sidebar"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <span aria-hidden="true">☰</span>
+            </button>
+
+            <div className="workspace-toolbar__title">
+              {isEditingTitle ? (
+                <form onSubmit={saveTitle}>
+                  <label className="visually-hidden" htmlFor="conversation-title">대화 제목</label>
+                  <input id="conversation-title" className="conversation-title-input" value={title} onChange={(event) => setTitle(event.target.value)} autoFocus />
+                  <button type="submit">저장</button>
+                </form>
+              ) : (
+                <button className="workspace-title-button" type="button" onClick={() => setIsEditingTitle(true)}>
+                  <span id="chat-title">{conversation.title}</span>
+                  <small>편집</small>
+                </button>
+              )}
+            </div>
+
+            <WorkspaceSettings settings={settings} onChange={setSettings} />
+          </header>
+
+          <div className="chat-conversation">
+            <div className="chat-conversation__inner">
+              {!messages.length && (
+                <div className="chat-empty-state workspace-empty">
+                  <span className="workspace-empty__mark" aria-hidden="true"><BrandLogo /></span>
+                  <p className="chat-empty-state__eyebrow">STUDYBOX AI</p>
+                  <h2>무엇을 공부해 볼까요?</h2>
+                  <p>{settingsLabels.level[settings.level]} 수준과 {settingsLabels.mode[settings.mode]} 방식으로 답변합니다.</p>
+                  <div className="workspace-suggestions" aria-label="추천 질문">
+                    {["광합성을 쉽게 설명해 줘", "이차방정식 풀이를 도와줘", "조선 후기 경제를 요약해 줘"].map((suggestion) => (
+                      <button type="button" onClick={() => setQuestion(suggestion)} key={suggestion}>{suggestion}</button>
+                    ))}
                   </div>
-                )}
-                <div className="chat-message-list" aria-label="학습 대화 내용" role="log">
-                  {messages.map((message) => <ChatMessage message={message} key={message.id} />)}
                 </div>
+              )}
+              <div className="chat-message-list" aria-label="학습 대화 내용" role="log">
+                {messages.map((message) => <ChatMessage message={message} key={message.id} />)}
               </div>
             </div>
-            <form className="chat-composer" onSubmit={sendMessage} aria-busy={sending}>
-              <div className="chat-composer__inner">
+          </div>
+
+          <form className="chat-composer workspace-composer" onSubmit={sendMessage} aria-busy={sending}>
+            <div className="chat-composer__inner">
+              <div className="workspace-composer__box">
                 <label className="visually-hidden" htmlFor="chat-question">추가 질문</label>
-                <textarea id="chat-question" rows={2} maxLength={2000} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="궁금한 내용을 이어서 질문해 보세요" disabled={sending} />
+                <textarea id="chat-question" rows={3} maxLength={2000} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="StudyBox AI에게 질문하세요" disabled={sending} />
                 <div className="chat-composer__footer">
-                  <p>최대 2,000자까지 입력할 수 있습니다.</p>
-                  <button className="chat-send-button" type="submit" disabled={sending || !question.trim()}>{sending ? "답변 준비 중..." : "보내기"}</button>
+                  <p>{settingsLabels.mode[settings.mode]} · {settingsLabels.level[settings.level]} · {settingsLabels.responseLength[settings.responseLength]}</p>
+                  <button className="chat-send-button" type="submit" aria-label="보내기" disabled={sending || !question.trim()}>
+                    <span aria-hidden="true">{sending ? "…" : "↑"}</span>
+                  </button>
                 </div>
-                {error && <p className="chat-composer__error" role="alert">{error}</p>}
               </div>
-            </form>
-            <p className="chat-live" role="status" aria-live="polite">{sending ? "선택한 방식으로 학습 답변을 구성하고 있습니다." : ""}</p>
-          </section>
-        </div>
+              {error && <p className="chat-composer__error" role="alert">{error}</p>}
+            </div>
+          </form>
+          <p className="chat-live" role="status" aria-live="polite">{sending ? "선택한 설정으로 답변을 구성하고 있습니다." : ""}</p>
+        </section>
       </main>
     </>
   );

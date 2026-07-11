@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run build --workspace=@studybox/shared && concurrently -n api,web -c cyan,magenta \"npm run dev --workspace=@studybox/api\" \"npm run dev --workspace=@studybox/web\"",
+    "dev": "node ./scripts/dev.mjs",
     "build": "npm run build --workspace=@studybox/shared && npm run build --workspace=@studybox/api && npm run build --workspace=@studybox/web",
     "typecheck": "npm run build --workspace=@studybox/shared && npm run typecheck --workspace=@studybox/shared && npm run typecheck --workspace=@studybox/api && npm run typecheck --workspace=@studybox/web",
     "test": "npm run build --workspace=@studybox/shared && npm run test --workspace=@studybox/shared && npm run test --workspace=@studybox/api && npm run test --workspace=@studybox/web",

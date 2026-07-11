@@ -10,6 +10,7 @@ const booleanFromEnvironment = z
 const configSchema = z.object({
   nodeEnv: z.enum(["development", "test", "production"]).default("development"),
   port: z.coerce.number().int().min(1).max(65535).default(3001),
+  storageMode: z.enum(["memory", "postgres"]).optional(),
   databaseUrl: z.string().min(1).default("postgresql://studybox:studybox@localhost:5432/studybox"),
   appOrigin: z.string().url().default("http://localhost:5173"),
   sessionCookieName: z.string().min(1).default("studybox_session"),
@@ -28,6 +29,7 @@ const configSchema = z.object({
 const parsed = configSchema.parse({
   nodeEnv: process.env.NODE_ENV,
   port: process.env.PORT,
+  storageMode: process.env.STORAGE_MODE,
   databaseUrl: process.env.DATABASE_URL,
   appOrigin: process.env.APP_ORIGIN,
   sessionCookieName: process.env.SESSION_COOKIE_NAME,
@@ -45,6 +47,7 @@ const parsed = configSchema.parse({
 
 export const config = {
   ...parsed,
+  storageMode: parsed.storageMode || (parsed.nodeEnv === "production" ? "postgres" : "memory"),
   cookieSecure: parsed.cookieSecure || parsed.nodeEnv === "production",
   adminUserIdSet: new Set(
     parsed.adminUserIds
