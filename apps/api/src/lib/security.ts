@@ -12,3 +12,11 @@ export const hashPassword = (password: string) =>
   argon2.hash(password, { type: argon2.argon2id });
 
 export const verifyPassword = (hash: string, password: string) => argon2.verify(hash, password);
+
+let dummyPasswordHashPromise: Promise<string> | null = null;
+export const getDummyPasswordHash = () => {
+  if (!dummyPasswordHashPromise) {
+    dummyPasswordHashPromise = hashPassword("studybox-dummy-verifier-do-not-use");
+  }
+  return dummyPasswordHashPromise;
+};

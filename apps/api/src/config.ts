@@ -17,11 +17,18 @@ const configSchema = z.object({
   sessionTtlDays: z.coerce.number().int().min(1).max(90).default(7),
   aiProvider: z.enum(["mock", "openai-compatible"]).default("mock"),
   aiDailyLimit: z.coerce.number().int().min(1).max(500).default(50),
-  aiBaseUrl: z.string().url().default("https://api.openai.com/v1"),
+  aiBaseUrl: z
+    .string()
+    .url()
+    .default("https://api.openai.com/v1")
+    .refine((url) => process.env.NODE_ENV !== "production" || url.startsWith("https://"), {
+      message: "AI_BASE_URL must use HTTPS in production to protect the API key"
+    }),
   aiModel: z.string().trim().default(""),
   aiApiKey: z.string().trim().optional(),
   aiTimeoutMs: z.coerce.number().int().min(1000).max(120000).default(30000),
   adminUserIds: z.string().default(""),
+  adminRegistrationToken: z.string().trim().optional(),
   logLevel: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
   cookieSecure: booleanFromEnvironment
 });
@@ -41,6 +48,7 @@ const parsed = configSchema.parse({
   aiApiKey: process.env.AI_API_KEY,
   aiTimeoutMs: process.env.AI_TIMEOUT_MS,
   adminUserIds: process.env.ADMIN_USER_IDS,
+  adminRegistrationToken: process.env.ADMIN_REGISTRATION_TOKEN,
   logLevel: process.env.LOG_LEVEL,
   cookieSecure: process.env.COOKIE_SECURE
 });

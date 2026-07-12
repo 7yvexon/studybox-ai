@@ -10,7 +10,8 @@ export const registerSchema = z.object({
   schoolName: z.string().trim().min(1).max(100),
   grade: z.coerce.number().int().min(1).max(6),
   classNumber: z.coerce.number().int().min(1).max(99),
-  studentNumber: z.coerce.number().int().min(1).max(99)
+  studentNumber: z.coerce.number().int().min(1).max(99),
+  adminToken: z.string().trim().max(256).optional()
 });
 
 export const loginSchema = z.object({ username: usernameSchema, password: z.string().min(1).max(128) });

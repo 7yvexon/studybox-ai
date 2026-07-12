@@ -2,6 +2,11 @@ name: Deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (commit SHA, e.g. abcd123)"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -10,16 +15,25 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+      - name: Verify CI passed on target commit
+        run: |
+          COMMIT_SHA="${{ github.sha }}"
+          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/commits/${COMMIT_SHA}/check-runs")
+          PUSH_COUNT=$(echo "$RESPONSE" | jq '[.check_runs[] | select(.name | test("push-images"))] | length')
+          if [ "$PUSH_COUNT" = "0" ]; then
+            echo "::error::No CI push-images check runs found for commit ${COMMIT_SHA}. Run CI first."
+            exit 1
+          fi
+          FAILED_COUNT=$(echo "$RESPONSE" | jq '[.check_runs[] | select(.name | test("push-images")) | select(.conclusion != "success")] | length')
+          if [ "$FAILED_COUNT" != "0" ]; then
+            echo "::error::CI push-images has ${FAILED_COUNT} unsuccessful check run(s) for commit ${COMMIT_SHA}. Fix CI before deploying."
+            exit 1
+          fi
+          echo "All CI push-images check runs passed for ${COMMIT_SHA}"
       - run: mkdir -p ~/.ssh
       - run: printf '%s' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
         env:
@@ -28,7 +42,11 @@ jobs:
       - run: ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-      - run: ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_PATH' && git pull --ff-only && docker compose -f docker-compose.yml -f docker-compose.production.yml up -d --build"
+      - name: Pull and deploy images
+        run: |
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_PATH' && \
+            IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f docker-compose.production.yml pull && \
+            IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f docker-compose.production.yml up -d"
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}

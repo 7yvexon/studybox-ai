@@ -87,12 +87,14 @@ async function main() {
 
   api.on("exit", (code) => {
     if (code && code !== 0) {
+      web.kill("SIGTERM");
       process.exit(code);
     }
   });
 
   web.on("exit", (code) => {
     if (code && code !== 0) {
+      api.kill("SIGTERM");
       process.exit(code);
     }
   });

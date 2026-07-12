@@ -12,6 +12,7 @@ import {
 import {
   defaultLearningSettings,
   normalizeAnswerLevel,
+  normalizeLearningSettings,
   type Conversation,
   type LearningMode,
   type LearningSettings,
@@ -582,7 +583,7 @@ const LandingPage = () => {
               <p className="hero-announcement"><span>NEW</span> StudyBox Reasoning이 학습 목적을 더 정확하게 이해합니다.</p>
               <div className="hero-grid">
                 <div className="hero__content">
-                  <h1 id="hero-title">StudyBox <span>AI</span></h1>
+                  <h2 id="hero-title">StudyBox <span>AI</span></h2>
                   <p className="hero__tagline">답을 넘어, 공부의 본질로.</p>
                   <div className="hero-actions">
                     <button className="hero-action-card" type="button" onClick={() => startLearning()}>
@@ -1036,13 +1037,12 @@ const NewConversationPage = () => {
   const [searchParams] = useSearchParams();
   const [error, setError] = useState("");
   const settings = useMemo<LearningSettings>(
-    () => ({
-      mode: (searchParams.get("mode") as LearningSettings["mode"]) || defaultLearningSettings.mode,
-      level: normalizeAnswerLevel(searchParams.get("level")) || defaultLearningSettings.level,
-      responseLength:
-        (searchParams.get("responseLength") as LearningSettings["responseLength"]) ||
-        defaultLearningSettings.responseLength
-    }),
+    () =>
+      normalizeLearningSettings({
+        mode: searchParams.get("mode"),
+        level: normalizeAnswerLevel(searchParams.get("level")),
+        responseLength: searchParams.get("responseLength")
+      }) || defaultLearningSettings,
     [searchParams]
   );
 
@@ -1122,30 +1122,34 @@ const ChatPage = () => {
   const [error, setError] = useState("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [usageLimit, setUsageLimit] = useState<number | null>(null);
 
   const refreshList = async () => {
     const result = await api.listConversations();
     setConversations(result.conversations);
   };
 
-  const loadConversation = async () => {
-    if (!conversationId) {
-      return;
-    }
-
+  const loadConversation = async (id: string, active: () => boolean) => {
     setLoading(true);
     setError("");
     try {
-      const result = await api.getConversation(conversationId);
+      const result = await api.getConversation(id);
+      if (!active()) {
+        return;
+      }
       setConversation(result.conversation);
       setMessages(result.messages);
       setSettings(result.conversation.settings);
       setTitle(result.conversation.title);
       await refreshList();
     } catch (requestError) {
-      setError(getErrorMessage(requestError));
+      if (active()) {
+        setError(getErrorMessage(requestError));
+      }
     } finally {
-      setLoading(false);
+      if (active()) {
+        setLoading(false);
+      }
     }
   };
 
@@ -1155,7 +1159,16 @@ const ChatPage = () => {
   }, []);
 
   useEffect(() => {
-    loadConversation();
+    if (!conversationId) {
+      return;
+    }
+
+    let active = true;
+    loadConversation(conversationId, () => active);
+
+    return () => {
+      active = false;
+    };
   }, [conversationId]);
 
   const sendMessage = async (event?: FormEvent) => {
@@ -1172,6 +1185,7 @@ const ChatPage = () => {
       const result = await api.sendMessage(conversationId, { question: question.trim(), settings });
       setMessages((current) => [...current, result.userMessage, result.assistantMessage]);
       setQuestion("");
+      setUsageLimit(result.usageLimit);
       setConversation((current) => current ? { ...current, settings, updatedAt: result.assistantMessage.createdAt } : current);
       await refreshList();
     } catch (requestError) {
@@ -1333,7 +1347,10 @@ const ChatPage = () => {
                 <label className="visually-hidden" htmlFor="chat-question">추가 질문</label>
                 <textarea id="chat-question" rows={3} maxLength={2000} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="StudyBox AI에게 질문하세요" disabled={sending} />
                 <div className="chat-composer__footer">
-                  <p>{settingsLabels.mode[settings.mode]} · {settingsLabels.level[settings.level]} · {settingsLabels.responseLength[settings.responseLength]}</p>
+                  <p>
+                    {settingsLabels.mode[settings.mode]} · {settingsLabels.level[settings.level]} · {settingsLabels.responseLength[settings.responseLength]}
+                    {usageLimit !== null && ` · 오늘 한도 ${usageLimit}회`}
+                  </p>
                   <button className="chat-send-button" type="submit" aria-label="보내기" disabled={sending || !question.trim()}>
                     <span aria-hidden="true">{sending ? "…" : "↑"}</span>
                   </button>

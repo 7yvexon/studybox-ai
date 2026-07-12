@@ -85,11 +85,6 @@ export const findUserByUsername = async (username: string): Promise<UserRow | nu
   return result.rows[0] ?? null;
 };
 
-export const findUserById = async (id: string) => {
-  const result = await query<UserRow>("SELECT * FROM users WHERE id = $1", [id]);
-  return result.rows[0] ?? null;
-};
-
 export const getCurrentUserBySession = async (tokenHash: string) => {
   const result = await query<UserRow>(
     `SELECT users.*
@@ -154,23 +149,6 @@ export const createSession = async (userId: string, tokenHash: string, expiresAt
 
 export const deleteSession = async (tokenHash: string) => {
   await query("DELETE FROM sessions WHERE token_hash = $1", [tokenHash]);
-};
-
-
-export const createInviteCode = async ({
-  codeHash,
-  createdBy,
-  expiresAt
-}: {
-  codeHash: string;
-  createdBy: string;
-  expiresAt: Date | null;
-}) => {
-  await query(
-    `INSERT INTO invite_codes (id, code_hash, created_by, expires_at)
-     VALUES ($1, $2, $3, $4)`,
-    [createId(), codeHash, createdBy, expiresAt]
-  );
 };
 
 export const listConversations = async (userId: string) => {
@@ -314,10 +292,10 @@ export const appendMessages = async ({
       model
     });
 
-    await client.query("UPDATE conversations SET settings = $1, updated_at = NOW() WHERE id = $2", [
-      settings,
-      conversationId
-    ]);
+    await client.query(
+      "UPDATE conversations SET settings = $1, updated_at = NOW(), last_message_preview = $2 WHERE id = $3",
+      [settings, reply.summary.slice(0, 140), conversationId]
+    );
 
     return { userMessage: mapMessage(userMessage), assistantMessage: mapMessage(assistantMessage) };
   });

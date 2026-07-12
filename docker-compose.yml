@@ -8,6 +8,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-studybox} -d ${POSTGRES_DB:-studybox}"]
       interval: 10s
@@ -15,6 +17,7 @@ services:
       retries: 5
 
   api:
+    image: ghcr.io/${IMAGE_OWNER:-7yvexon}/studybox-ai/api:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -22,11 +25,14 @@ services:
     env_file: .env
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-studybox}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB:-studybox}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-studybox}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@database:5432/${POSTGRES_DB:-studybox}
       PORT: 3001
     depends_on:
       database:
         condition: service_healthy
+    networks:
+      - backend
+      - frontend
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
@@ -34,6 +40,7 @@ services:
       retries: 3
 
   web:
+    image: ghcr.io/${IMAGE_OWNER:-7yvexon}/studybox-ai/web:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: apps/web/Dockerfile
@@ -41,8 +48,15 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    networks:
+      - frontend
     ports:
-      - "80:80"
+      - "80:8080"
 
 volumes:
   postgres-data:
+
+networks:
+  backend:
+  frontend:
+
