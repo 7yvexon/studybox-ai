@@ -29,7 +29,7 @@ import {
   checkStorageReady
 } from "./storage/index.js";
 import { errorHandler, notFound, parseBody, ApiError } from "./lib/http.js";
-import { createOpaqueToken, hashPassword, hashToken, verifyPassword } from "./lib/security.js";
+import { createOpaqueToken, getDummyPasswordHash, hashPassword, hashToken, verifyPassword } from "./lib/security.js";
 import { clearSessionCookie, requireAuth, requireSameOrigin, setSessionCookie } from "./middleware/auth.js";
 
 const answerLevelSchema = z
@@ -85,6 +85,10 @@ export const createApp = () => {
     limit: 10,
     standardHeaders: "draft-8",
     legacyHeaders: false,
+    keyGenerator: (request) => {
+      const username = (request.body as { username?: string } | undefined)?.username?.toLowerCase();
+      return `${request.ip}:${username || ""}`;
+    },
     message: { error: { code: "AUTH_RATE_LIMIT", message: "잠시 후 다시 시도해 주세요." } }
   });
   const messageLimiter = rateLimit({
@@ -96,7 +100,7 @@ export const createApp = () => {
     message: { error: { code: "MESSAGE_RATE_LIMIT", message: "잠시 후 다시 시도해 주세요." } }
   });
 
-  app.set("trust proxy", 1);
+  app.set("trust proxy", config.nodeEnv === "production" ? 1 : false);
   app.disable("x-powered-by");
   app.use(
     pinoHttp({
@@ -132,6 +136,19 @@ export const createApp = () => {
     authLimiter,
     asyncRoute(async (request, response) => {
       const input = parseBody(registerSchema, request);
+      const isAdminName = config.adminUserIdSet.has(input.username);
+      const role: "user" | "admin" = (() => {
+        if (!isAdminName) {
+          return "user";
+        }
+        if (!config.adminRegistrationToken) {
+          throw new ApiError(403, "ADMIN_REGISTRATION_DISABLED", "관리자 등록이 비활성화되어 있습니다.");
+        }
+        if (input.adminToken !== config.adminRegistrationToken) {
+          throw new ApiError(403, "ADMIN_REGISTRATION_TOKEN_INVALID", "관리자 등록 토큰이 올바르지 않습니다.");
+        }
+        return "admin";
+      })();
       const user = await registerUser({
         username: input.username,
         passwordHash: await hashPassword(input.password),
@@ -140,7 +157,7 @@ export const createApp = () => {
         grade: input.grade,
         classNumber: input.classNumber,
         studentNumber: input.studentNumber,
-        role: config.adminUserIdSet.has(input.username) ? "admin" : "user"
+        role
       });
       const token = createOpaqueToken();
       await createSession(
@@ -161,7 +178,12 @@ export const createApp = () => {
       const { username, password } = parseBody(loginSchema, request);
       const user = await findUserByUsername(username);
 
-      if (!user || !(await verifyPassword(user.password_hash, password))) {
+      if (!user) {
+        await verifyPassword(await getDummyPasswordHash(), password);
+        throw new ApiError(401, "INVALID_CREDENTIALS", "아이디 또는 비밀번호가 올바르지 않습니다.");
+      }
+
+      if (!(await verifyPassword(user.password_hash, password))) {
         throw new ApiError(401, "INVALID_CREDENTIALS", "아이디 또는 비밀번호가 올바르지 않습니다.");
       }
 

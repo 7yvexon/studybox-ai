@@ -12,3 +12,4 @@ data/
 backups/
 scripts/start-dev.ps1
 scripts/watch-dev.ps1
+infra/nginx/tls.conf

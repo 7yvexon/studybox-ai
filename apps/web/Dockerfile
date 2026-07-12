@@ -11,7 +11,7 @@ COPY packages/shared packages/shared
 COPY css css
 RUN npm run build --workspace=@studybox/shared && npm run build --workspace=@studybox/web
 
-FROM nginx:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.27-alpine
 COPY infra/nginx/http.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /workspace/apps/web/dist /usr/share/nginx/html
-EXPOSE 80
+EXPOSE 8080
