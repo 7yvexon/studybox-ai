@@ -1,6 +1,7 @@
 @import "../../../css/style.css";
 @import "./cinematic-polish.css";
 @import "./cinematic-story.css";
+@import "./kinetic-story.css";
 
 #root {
   min-height: 100svh;
