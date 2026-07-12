@@ -10,3 +10,5 @@ coverage/
 *.log
 data/
 backups/
+scripts/start-dev.ps1
+scripts/watch-dev.ps1
