@@ -60,25 +60,45 @@ npm run build
 
 ## 운영 배포
 
-1. Ubuntu VPS에 Docker Compose와 TLS 인증서가 준비된 상태에서 저장소를 배치합니다.
-2. `.env.example`을 복사한 `.env`에 운영 도메인, 긴 DB 비밀번호, 관리자 아이디 목록을 입력합니다. `ADMIN_USER_IDS`에 쉼표로 구분한 아이디를 등록하고, `ADMIN_REGISTRATION_TOKEN`에 관리자 등록용 긴 무작위 토큰을 설정합니다. 해당 아이디로 가입할 때 이 토큰을 함께 제출해야만 관리자 역할이 부여됩니다. `.env`는 저장소에 커밋하지 않습니다.
-3. 첫 HTTP 배포를 실행합니다.
+이 프로젝트는 GitHub Container Registry(ghcr.io)를 통해 미리 빌드된 Docker 이미지를 배포합니다. CI가 `main` 브랜치에 push할 때마다 `ghcr.io/7yvexon/studybox-ai/api`와 `ghcr.io/7yvexon/studybox-ai/web` 이미지를 `:main`, `:<commit-sha>`, `:latest` 태그로 게시합니다.
+
+### 서버 준비
+
+1. Ubuntu VPS에 Docker Compose와 TLS 인증서를 준비합니다. Git이나 Node.js는 불필요합니다.
+2. 서버에 Compose 파일과 `.env`를 배치합니다.
+   - `docker-compose.yml`, `docker-compose.production.yml`, `infra/nginx/tls.conf`(도메인에 맞게 수정), `.env`
+   - `.env.example`을 복사한 `.env`에 운영 도메인, 긴 DB 비밀번호, 관리자 아이디 목록을 입력합니다. `ADMIN_USER_IDS`에 쉼표로 구분한 아이디를 등록하고, `ADMIN_REGISTRATION_TOKEN`에 관리자 등록용 긴 무작위 토큰을 설정합니다. 해당 아이디로 가입할 때 이 토큰을 함께 제출해야만 관리자 역할이 부여됩니다. `.env`는 저장소에 커밋하지 않습니다.
+3. GHCR 이미지가 private인 경우 서버에서 GitHub 인증이 필요합니다. `read:packages` 권한이 있는 Personal Access Token으로 로그인합니다.
 
    ```bash
-   docker compose up -d --build
+   echo "$GITHUB_TOKEN" | docker login ghcr.io -u 7yvexon --password-stdin
    ```
 
-4. 도메인 인증서를 발급한 뒤 `infra/nginx/tls.conf.example`을 `infra/nginx/tls.conf`로 복사해 실제 도메인으로 바꿉니다. 다음 구성으로 HTTPS를 적용합니다.
+### 첫 배포 (HTTP)
 
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.production.yml up -d --build
-   ```
+```bash
+IMAGE_TAG=latest docker compose up -d
+```
+
+### HTTPS 적용
+
+도메인 인증서를 발급한 뒤 `infra/nginx/tls.conf.example`을 `infra/nginx/tls.conf`로 복사해 실제 도메인으로 바꿉니다.
+
+```bash
+IMAGE_TAG=latest docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+```
+
+### 배포 (GitHub Actions Deploy 워크플로)
+
+CI가 `push-images` 잡을 통과한 커밋의 SHA를 `image_tag` 입력으로 지정해 수동 실행합니다. 서버에서 이미지를 pull하고 교체합니다.
+
+이전 커밋의 SHA를 입력하면 즉시 롤백됩니다.
 
 PostgreSQL은 Compose 내부 네트워크에만 있고 호스트 포트를 열지 않습니다. `/api/health`는 프로세스 상태, `/api/ready`는 DB 연결 상태를 반환합니다.
 
 현재 인증 모델 전환 마이그레이션(`002_switch_to_username_auth.sql`)은 기존 이메일 계정 데이터를 새 학생 프로필 모델로 옮기지 않고 초기화합니다. 이미 사용자 데이터가 있는 운영 DB에는 그대로 적용하지 말고, 먼저 백업한 뒤 별도의 데이터 변환 마이그레이션을 준비하세요. 데이터가 없는 신규 배포에서는 Compose 시작 시 마이그레이션이 자동으로 실행됩니다.
 
-GitHub Actions의 `CI`는 타입 검사·테스트·빌드·두 Docker 이미지 빌드를 검증합니다. `Deploy` 워크플로는 수동 실행만 가능하며 `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`, `DEPLOY_SSH_KEY` 환경 시크릿이 준비된 GitHub `production` 환경에서 실행합니다.
+GitHub Actions의 `CI`는 타입 검사·테스트·빌드·마이그레이션 검증·Docker 이미지 빌드 및 ghcr.io 게시를 수행합니다. `Deploy` 워크플로는 수동 실행만 가능하며 `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`, `DEPLOY_SSH_KEY` 환경 시크릿이 준비된 GitHub `production` 환경에서 실행합니다.
 
 ## 백업과 복구
 
