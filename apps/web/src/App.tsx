@@ -367,12 +367,17 @@ const LandingPage = () => {
     const root = document.documentElement;
     const hero = document.querySelector<HTMLElement>(".scroll-scene--hero");
     const workspace = document.querySelector<HTMLElement>(".scroll-scene--workspace");
+    const kineticStory = document.querySelector<HTMLElement>(".kinetic-story");
     const scenes = Array.from(document.querySelectorAll<HTMLElement>(".scroll-scene"));
     const items = Array.from(flow.querySelectorAll<HTMLElement>(".mode-flow__item"));
     const progressLinks = Array.from(flow.querySelectorAll<HTMLElement>(".mode-flow__progress a"));
     let animationFrame = 0;
     let observer: IntersectionObserver | undefined;
     let previousScrollY = window.scrollY;
+    const smoothstep = (start: number, end: number, value: number) => {
+      const progress = Math.min(1, Math.max(0, (value - start) / Math.max(0.001, end - start)));
+      return progress * progress * (3 - 2 * progress);
+    };
 
     if ("IntersectionObserver" in window) {
       observer = new IntersectionObserver(
@@ -431,6 +436,35 @@ const LandingPage = () => {
 
         if (hero) {
           hero.dataset.heroPhase = "home";
+        }
+
+        if (kineticStory) {
+          const kineticRect = kineticStory.getBoundingClientRect();
+          const kineticTravel = Math.max(1, kineticRect.height - viewportHeight);
+          const kineticProgress = Math.min(1, Math.max(0, -kineticRect.top / kineticTravel));
+          const intro = smoothstep(0.01, 0.12, kineticProgress);
+          const idea = smoothstep(0.13, 0.28, kineticProgress);
+          const gallery = smoothstep(0.29, 0.47, kineticProgress);
+          const galleryOut = smoothstep(0.55, 0.68, kineticProgress);
+          const workspaceIn = smoothstep(0.66, 0.84, kineticProgress);
+          const finish = smoothstep(0.9, 0.99, kineticProgress);
+
+          kineticStory.style.setProperty("--kinetic-progress", kineticProgress.toFixed(4));
+          kineticStory.style.setProperty("--kinetic-intro", intro.toFixed(4));
+          kineticStory.style.setProperty("--kinetic-idea", idea.toFixed(4));
+          kineticStory.style.setProperty("--kinetic-gallery", gallery.toFixed(4));
+          kineticStory.style.setProperty("--kinetic-gallery-out", galleryOut.toFixed(4));
+          kineticStory.style.setProperty("--kinetic-workspace", workspaceIn.toFixed(4));
+          kineticStory.style.setProperty("--kinetic-finish", finish.toFixed(4));
+          kineticStory.style.setProperty("--kinetic-rail", `${((1 - gallery) * 34 - galleryOut * 26).toFixed(2)}vw`);
+          kineticStory.style.setProperty("--kinetic-turn", `${(kineticProgress * 238).toFixed(2)}deg`);
+          kineticStory.dataset.kineticPhase = kineticProgress < 0.15
+            ? "intro"
+            : kineticProgress < 0.3
+              ? "idea"
+              : kineticProgress < 0.66
+                ? "gallery"
+                : "workspace";
         }
 
         if (workspace) {
@@ -609,81 +643,77 @@ const LandingPage = () => {
           </div>
         </section>
 
-        <section id="story" className="mode-flow scroll-scene scroll-scene--modes" aria-labelledby="story-title">
-          <div className="mode-flow__background" aria-hidden="true">
-            <span /><span /><span /><span /><span /><span />
-          </div>
-          <nav className="mode-flow__progress" aria-label="학습 모드 진행 상황">
-            <span className="mode-flow__progress-track" aria-hidden="true"><i /></span>
-            {learningStories.map((story, index) => (
-              <a href={`#mode-${story.mode}`} aria-label={settingsLabels.mode[story.mode]} key={story.mode}>
-                {String(index + 1).padStart(2, "0")}
-              </a>
-            ))}
-          </nav>
-          <div className="mode-flow__inner container">
-            <header className="mode-flow__heading page-reveal page-reveal--left">
-              <p className="section-eyebrow">STUDYBOX AI</p>
-              <h2 id="story-title">질문 하나로,<br /><span>공부는 달라집니다.</span></h2>
-              <p>답을 받는 순간부터, 생각은 나만의 학습 흐름이 됩니다.</p>
+        <section id="story" className="mode-flow kinetic-story scroll-scene scroll-scene--modes" aria-labelledby="story-title">
+          <div className="kinetic-story__stage">
+            <span className="mode-flow__item kinetic-story__observer-target" aria-hidden="true" />
+            <div className="kinetic-story__planes" aria-hidden="true"><i /><i /><i /><i /></div>
+            <div className="kinetic-story__counter" aria-hidden="true">
+              <span>01</span><i /><span>04</span>
+            </div>
+
+            <header className="kinetic-story__intro">
+              <p>STUDYBOX REASONING</p>
+              <h2 id="story-title">질문은 하나.<br /><strong>생각은 더 멀리.</strong></h2>
+              <span>스크롤할수록 질문이 학습의 구조로 바뀝니다.</span>
             </header>
 
-            <div className="mode-flow__list">
-              {learningStories.map((story, index) => {
-                const response = previewResponses[story.mode];
-                const [firstLine, secondLine] = story.title.split("\n");
-
-                return (
-                  <article id={`mode-${story.mode}`} className={`mode-flow__item mode-flow__item--${story.mode}`} key={story.mode}>
-                    <div className="mode-flow__item-fx" aria-hidden="true">
-                      <b>{String(index + 1).padStart(2, "0")}</b>
-                      <span /><span /><span />
-                    </div>
-                    <div className="mode-flow__copy">
-                      <p className="mode-flow__meta">
-                        <span>{String(index + 1).padStart(2, "0")}</span>
-                        {settingsLabels.mode[story.mode]}
-                      </p>
-                      <h3>{firstLine}<br /><strong>{secondLine}</strong></h3>
-                      <p className="mode-flow__description">{story.description}</p>
-                      <div className="mode-flow__outline" aria-label="답변 구성">
-                        {response.sections.map((section) => <span key={section.title}>{section.title}</span>)}
-                      </div>
-                    </div>
-
-                    <div className="flow-response-shell">
-                      <div className="flow-response" aria-label={`${settingsLabels.mode[story.mode]} 답변 예시`}>
-                        <div className="flow-response__bar">
-                          <span><BrandLogo /></span>
-                          <p>{settingsLabels.mode[story.mode]} 답변 생성</p>
-                          <i aria-hidden="true" />
-                        </div>
-                        <div className="flow-response__question">
-                          <span>나</span>
-                          <p>{response.question}</p>
-                        </div>
-                        <div className="flow-response__answer">
-                          <span className="flow-response__ai">AI</span>
-                          <div>
-                            <p className="flow-response__meta">{settingsLabels.mode[story.mode]} · 중학교 2학년</p>
-                            <h4>{response.title}</h4>
-                            <p className="flow-response__summary">{response.summary}</p>
-                            <div className="flow-response__sections">
-                              {response.sections.map((section, sectionIndex) => (
-                                <div key={section.title}>
-                                  <span>{String(sectionIndex + 1).padStart(2, "0")}</span>
-                                  <p><strong>{section.title}</strong>{section.content}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
+            <div className="kinetic-story__idea" aria-hidden="true">
+              <p>Designed for learning.<br />Built around you.</p>
+              <h3>답을 주는 AI가 아니라,<br /><strong>공부를 설계하는 AI.</strong></h3>
             </div>
+
+            <div className="kinetic-story__core" aria-hidden="true">
+              <div className="kinetic-story__core-face">
+                <BrandLogo />
+                <strong>AI</strong>
+              </div>
+              <i /><i /><i />
+            </div>
+
+            <div className="kinetic-story__gallery" aria-hidden="true">
+              <header>
+                <p>FIVE LEARNING MODES</p>
+                <h3>같은 질문도,<br />배우는 방식은 다르게.</h3>
+              </header>
+              <div className="kinetic-story__rail">
+                {learningStories.map((story, index) => (
+                  <article key={story.mode}>
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <p>{settingsLabels.mode[story.mode]}</p>
+                    <h4>{story.title.replace("\n", " ")}</h4>
+                    <div><i /><i /><i /></div>
+                  </article>
+                ))}
+              </div>
+              <p className="kinetic-story__gallery-note">목적과 수준을 읽고, 가장 알맞은 답변 구조를 선택합니다.</p>
+            </div>
+
+            <div className="kinetic-story__workspace">
+              <header>
+                <p>YOUR LEARNING SPACE</p>
+                <h3>질문이 쌓일수록,<br /><strong>나만의 공부가 됩니다.</strong></h3>
+                <button type="button" onClick={startLearning}>AI 학습 공간 열기 <span aria-hidden="true">↗</span></button>
+              </header>
+              <div className="kinetic-story__workspace-frame" aria-hidden="true">
+                <aside>
+                  <BrandLogo />
+                  <span>＋ 새 학습</span>
+                  <nav><i /><i /><i /><i /></nav>
+                  <footer><b>김</b><small>김학생</small></footer>
+                </aside>
+                <div className="kinetic-story__workspace-main">
+                  <header><b>새 학습 대화</b><div><span>개념 설명</span><span>중학교 2학년</span><span>보통 길이</span></div></header>
+                  <section>
+                    <p>STUDYBOX AI</p>
+                    <h4>무엇을 공부해 볼까요?</h4>
+                    <span>학습 목적과 답변 수준에 맞춰 대화를 시작합니다.</span>
+                  </section>
+                  <footer><span>궁금한 내용을 입력하세요</span><b>↑</b></footer>
+                </div>
+              </div>
+            </div>
+
+            <div className="kinetic-story__scroll-cue" aria-hidden="true"><i /> SCROLL TO CONTINUE</div>
           </div>
         </section>
 
