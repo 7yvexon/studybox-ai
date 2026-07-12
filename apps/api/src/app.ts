@@ -66,14 +66,17 @@ const getUser = (request: Request) => {
   return request.user;
 };
 
+const uuidSchema = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+
 const getConversationId = (request: Request) => {
   const value = request.params.conversationId;
+  const result = uuidSchema.safeParse(value);
 
-  if (typeof value !== "string") {
+  if (!result.success) {
     throw new ApiError(400, "INVALID_CONVERSATION_ID", "대화 식별자가 올바르지 않습니다.");
   }
 
-  return value;
+  return result.data;
 };
 
 export const createApp = () => {
@@ -114,12 +117,7 @@ export const createApp = () => {
   app.use(cookieParser());
 
   app.get("/api/health", (_request, response) => {
-    response.json({
-      status: "ok",
-      provider: provider.name,
-      storage: config.storageMode,
-      timestamp: new Date().toISOString()
-    });
+    response.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
   app.get(
@@ -316,7 +314,11 @@ export const createApp = () => {
 
   app.use(notFound);
   app.use((error: unknown, request: Request, response: Response, next: NextFunction) => {
-    if (!(error instanceof ApiError)) {
+    if (error instanceof ApiError) {
+      if ([401, 403, 429].includes(error.status)) {
+        request.log.warn({ code: error.code, status: error.status }, "auth/security error");
+      }
+    } else {
       request.log.error({ error }, "request failed");
     }
     errorHandler(error, request, response, next);

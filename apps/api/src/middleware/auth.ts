@@ -51,11 +51,23 @@ export const requireSameOrigin = (request: Request, _response: Response, next: N
   const origin = request.get("origin");
 
   if (!origin) {
+    const fetchSite = request.get("sec-fetch-site");
+    if (fetchSite && fetchSite !== "same-origin" && fetchSite !== "none") {
+      next(new ApiError(403, "ORIGIN_NOT_ALLOWED", "허용되지 않은 요청입니다."));
+      return;
+    }
     next();
     return;
   }
 
-  const requestedOrigin = new URL(origin);
+  let requestedOrigin: URL;
+  try {
+    requestedOrigin = new URL(origin);
+  } catch {
+    next(new ApiError(403, "ORIGIN_NOT_ALLOWED", "허용되지 않은 요청입니다."));
+    return;
+  }
+
   const configuredOrigin = new URL(config.appOrigin);
   const loopbackHosts = new Set(["localhost", "127.0.0.1", "::1"]);
   const isDevelopmentLoopback =

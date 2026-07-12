@@ -10,6 +10,8 @@ export class ApiClientError extends Error {
   }
 }
 
+const DEFAULT_TIMEOUT_MS = 30000;
+
 const request = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
   const headers = new Headers(options.headers);
 
@@ -17,7 +19,12 @@ const request = async <T>(path: string, options: RequestInit = {}): Promise<T> =
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(path, { ...options, headers, credentials: "include" });
+  const response = await fetch(path, {
+    ...options,
+    headers,
+    credentials: "include",
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
+  });
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as
@@ -59,16 +66,17 @@ export const api = {
       body: JSON.stringify(input)
     }),
   getConversation: (id: string) =>
-    request<{ conversation: Conversation; messages: Message[] }>(`/api/conversations/${id}`),
+    request<{ conversation: Conversation; messages: Message[] }>(`/api/conversations/${encodeURIComponent(id)}`),
   updateConversation: (id: string, title: string) =>
-    request<{ conversation: Conversation }>(`/api/conversations/${id}`, {
+    request<{ conversation: Conversation }>(`/api/conversations/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify({ title })
     }),
-  deleteConversation: (id: string) => request<void>(`/api/conversations/${id}`, { method: "DELETE" }),
+  deleteConversation: (id: string) =>
+    request<void>(`/api/conversations/${encodeURIComponent(id)}`, { method: "DELETE" }),
   sendMessage: (id: string, input: { question: string; settings: LearningSettings }) =>
     request<{ userMessage: Message; assistantMessage: Message; usageLimit: number }>(
-      `/api/conversations/${id}/messages`,
+      `/api/conversations/${encodeURIComponent(id)}/messages`,
       { method: "POST", body: JSON.stringify(input) }
     )
 };

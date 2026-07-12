@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { CurrentUser } from "@studybox/shared";
 
 import { api, ApiClientError } from "./api";
@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     try {
       const result = await api.getMe();
       setUser(result.user);
@@ -38,34 +38,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refresh().catch(() => setLoading(false));
+  }, [refresh]);
+
+  const register = useCallback(async (input: {
+    username: string;
+    password: string;
+    realName: string;
+    schoolName: string;
+    grade: number;
+    classNumber: number;
+    studentNumber: number;
+  }) => {
+    await api.register(input);
+    await refresh();
+  }, [refresh]);
+
+  const login = useCallback(async (username: string, password: string) => {
+    await api.login({ username, password });
+    await refresh();
+  }, [refresh]);
+
+  const logout = useCallback(async () => {
+    try {
+      await api.logout();
+    } finally {
+      setUser(null);
+    }
   }, []);
 
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      user,
-      loading,
-      refresh,
-      async register(input) {
-        await api.register(input);
-        await refresh();
-      },
-      async login(username, password) {
-        await api.login({ username, password });
-        await refresh();
-      },
-      async logout() {
-        await api.logout();
-        setUser(null);
-      }
-    }),
-    [user, loading]
+  return (
+    <AuthContext.Provider value={{ user, loading, refresh, register, login, logout }}>
+      {children}
+    </AuthContext.Provider>
   );
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
