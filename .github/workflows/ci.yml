@@ -3,11 +3,63 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "design-qa/**"
+      - ".codex-audit/**"
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "design-qa/**"
+      - ".codex-audit/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f apps/api/Dockerfile .
+      - run: docker build -f apps/web/Dockerfile .
+
+  migrate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: studybox
+          POSTGRES_USER: studybox
+          POSTGRES_PASSWORD: ci-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -15,8 +67,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
-      - run: docker build -f apps/api/Dockerfile .
-      - run: docker build -f apps/web/Dockerfile .
+      - run: npm run build --workspace=@studybox/shared
+      - run: npm run build --workspace=@studybox/api
+      - run: node apps/api/dist/cli/migrate.js
+        env:
+          DATABASE_URL: postgresql://studybox:ci-test-password@localhost:5432/studybox
+      - run: node apps/api/dist/cli/migrate.js
+        env:
+          DATABASE_URL: postgresql://studybox:ci-test-password@localhost:5432/studybox
