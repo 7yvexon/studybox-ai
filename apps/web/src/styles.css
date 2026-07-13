@@ -3,6 +3,7 @@
 @import "./cinematic-story.css";
 @import "./kinetic-story.css";
 @import "./landing-static.css";
+@import "./three-learning-story.css";
 
 #root {
   min-height: 100svh;

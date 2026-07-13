@@ -22,6 +22,7 @@ import {
 import { api, ApiClientError } from "./api";
 import { useAuth } from "./auth";
 import { DeepLanding, DeepProductMockup } from "./DeepLanding";
+import { ThreeLearningStory } from "./ThreeLearningStory";
 
 const settingsLabels = {
   mode: {
@@ -41,44 +42,6 @@ const settingsLabels = {
   },
   responseLength: { short: "짧게", standard: "보통", detailed: "자세히" }
 } as const;
-
-const learningStories = [
-  {
-    mode: "concept",
-    code: "01 / 개념 설명",
-    title: "모르는 걸\n아는 말로.",
-    description: "낯선 개념도 쉬운 표현과 익숙한 예시부터 시작합니다."
-  },
-  {
-    mode: "solve",
-    code: "02 / 문제 풀이",
-    title: "답보다 먼저\n보이는 과정.",
-    description: "조건, 공식, 풀이 순서를 연결해 다음 문제까지 풀 수 있게 합니다."
-  },
-  {
-    mode: "summary",
-    code: "03 / 핵심 요약",
-    title: "길게 읽지 않아도\n남는 핵심.",
-    description: "중요한 정보와 키워드만 남겨 복습의 밀도를 높입니다."
-  },
-  {
-    mode: "exam",
-    code: "04 / 시험 대비",
-    title: "시험 직전,\n봐야 할 것만.",
-    description: "암기 포인트부터 예상 문제와 오답까지 한 흐름으로 정리합니다."
-  },
-  {
-    mode: "performance",
-    code: "05 / 수행평가",
-    title: "막막한 시작을\n선명한 개요로.",
-    description: "수행 조건을 읽고 주제, 근거, 구성, 평가 기준을 함께 설계합니다."
-  }
-] satisfies Array<{
-  mode: LearningMode;
-  code: string;
-  title: string;
-  description: string;
-}>;
 
 const previewResponses: Record<
   LearningMode,
@@ -616,126 +579,21 @@ const LandingPage = () => {
           </div>
         </section>
 
-        <section id="story" className="mode-flow kinetic-story scroll-scene scroll-scene--modes scene-stack scene-stack--story" aria-labelledby="story-title">
-          <div className="kinetic-story__stage">
-            <span className="mode-flow__item kinetic-story__observer-target" aria-hidden="true" />
-            <div className="kinetic-story__planes" aria-hidden="true"><i /><i /><i /><i /></div>
-            <div className="kinetic-story__counter" aria-hidden="true">
-              <span>01</span><i /><span>04</span>
-            </div>
+        <ThreeLearningStory onStart={startLearning} />
 
-            <header className="kinetic-story__intro scroll-rise scene-panel">
-              <div className="kinetic-story__intro-copy">
-                <p>STUDYBOX REASONING</p>
-                <h2 id="story-title">질문은 하나.<br /><strong>생각은 더 멀리.</strong></h2>
-                <span>질문의 의도와 현재 수준을 읽고, 이해할 수 있는 설명의 순서로 다시 설계합니다.</span>
+        <section id="categories" className="answer-showcase scroll-scene scene-stack scene-stack--answer" aria-labelledby="categories-title">
+          <div className="answer-showcase__inner">
+            <header className="answer-showcase__header scroll-rise">
+              <div className="answer-showcase__title">
+                <p>ANSWER PREVIEW</p>
+                <h2 id="categories-title">같은 질문도,<br /><strong>목적에 따라 다르게.</strong></h2>
               </div>
-              <div className="scene-question-card">
-                <div className="scene-question-card__top">
-                  <strong>개념 설명</strong>
-                  <div><span>중학교 2학년</span><span>보통 길이</span></div>
-                </div>
-                <div className="scene-question-card__body">
-                  <p className="scene-question-card__question">왜 음수끼리 곱하면 양수가 돼?</p>
-                  <div className="scene-question-card__answer">
-                    <b>AI</b>
-                    <div>
-                      <small>부호의 변화부터 차근차근</small>
-                      <h3>반대 방향을 다시 반대로 바꾸면,<br />원래 방향이 됩니다.</h3>
-                      <p>수직선에서 ‘음수로 곱한다’는 것은 방향을 뒤집는다는 뜻이에요.</p>
-                      <div><span>− × − = +</span><i /><span>방향을 두 번 전환</span></div>
-                    </div>
-                  </div>
-                </div>
-                <div className="scene-question-card__composer"><span>이어서 질문해 보세요</span><b>↑</b></div>
-              </div>
+              <p className="answer-showcase__note">
+                <b>직접 바꿔보세요</b>
+                개념 설명부터 수행평가까지. 모드를 선택하면 답변의 시작점과 정보 밀도, 설명 순서가 함께 달라집니다.
+              </p>
             </header>
-
-            <div className="kinetic-story__idea scroll-rise scene-panel" aria-hidden="true">
-              <div className="kinetic-story__idea-copy">
-                <p>DESIGNED FOR LEARNING</p>
-                <h3>답을 주는 AI가 아니라,<br /><strong>공부를 설계하는 AI.</strong></h3>
-                <span>질문이 들어오는 순간, 네 단계의 학습 설계가 동시에 시작됩니다.</span>
-              </div>
-              <div className="scene-reasoning-board">
-                {[
-                  ["01", "질문 의도", "무엇이 막혔는지 먼저 파악합니다."],
-                  ["02", "학년과 수준", "이미 아는 것에서 설명을 시작합니다."],
-                  ["03", "설명 구조", "개념·예시·확인을 알맞게 배치합니다."],
-                  ["04", "다음 학습", "바로 이어서 풀 문제를 제안합니다."]
-                ].map(([number, title, body]) => (
-                  <article key={number}>
-                    <span>{number}</span>
-                    <div><h4>{title}</h4><p>{body}</p></div>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-            <div className="kinetic-story__core" aria-hidden="true">
-              <div className="kinetic-story__core-face">
-                <BrandLogo />
-                <strong>AI</strong>
-              </div>
-              <i /><i /><i />
-            </div>
-
-            <div className="kinetic-story__gallery scroll-rise scene-panel" aria-hidden="true">
-              <header>
-                <p>FIVE LEARNING MODES</p>
-                <h3>같은 질문도,<br />배우는 방식은 다르게.</h3>
-              </header>
-              <div className="kinetic-story__rail">
-                {learningStories.map((story, index) => (
-                  <article key={story.mode}>
-                    <span>{String(index + 1).padStart(2, "0")}</span>
-                    <p>{settingsLabels.mode[story.mode]}</p>
-                    <h4>{story.title.replace("\n", " ")}</h4>
-                    <div><i /><i /><i /></div>
-                  </article>
-                ))}
-              </div>
-              <p className="kinetic-story__gallery-note">목적과 수준을 읽고, 가장 알맞은 답변 구조를 선택합니다.</p>
-            </div>
-
-            <div className="kinetic-story__workspace scroll-rise scene-panel">
-              <header>
-                <p>YOUR LEARNING SPACE</p>
-                <h3>질문이 쌓일수록,<br /><strong>나만의 공부가 됩니다.</strong></h3>
-                <button type="button" onClick={startLearning}>AI 학습 공간 열기 <span aria-hidden="true">↗</span></button>
-              </header>
-              <div className="kinetic-story__workspace-frame" aria-hidden="true">
-                <aside>
-                  <BrandLogo />
-                  <span>＋ 새 학습</span>
-                  <nav><i /><i /><i /><i /></nav>
-                  <footer><b>김</b><small>김학생</small></footer>
-                </aside>
-                <div className="kinetic-story__workspace-main">
-                  <header><b>새 학습 대화</b><div><span>개념 설명</span><span>중학교 2학년</span><span>보통 길이</span></div></header>
-                  <section>
-                    <p>STUDYBOX AI</p>
-                    <h4>무엇을 공부해 볼까요?</h4>
-                    <span>학습 목적과 답변 수준에 맞춰 대화를 시작합니다.</span>
-                  </section>
-                  <footer><span>궁금한 내용을 입력하세요</span><b>↑</b></footer>
-                </div>
-              </div>
-            </div>
-
-            <div className="kinetic-story__scroll-cue" aria-hidden="true"><i /> SCROLL TO CONTINUE</div>
-          </div>
-        </section>
-
-        <section id="categories" className="section product-section scroll-scene scroll-scene--product scene-stack scene-stack--product" aria-labelledby="categories-title">
-          <div className="product-section__kinetic" aria-hidden="true"><span /><span /><span /></div>
-          <div className="container">
-            <header className="section-heading page-reveal page-reveal--left">
-              <p className="section-eyebrow">ANSWER PREVIEW</p>
-              <h2 id="categories-title">같은 질문.<br />다르게 이어지는 생각.</h2>
-              <p>답변의 시작점과 밀도, 흐름이 목적에 맞게 달라집니다.</p>
-            </header>
-            <div className="page-reveal page-reveal--product">
+            <div className="answer-showcase__preview scroll-rise">
               <LearningPreview mode={settings.mode} onModeChange={selectMode} />
             </div>
           </div>

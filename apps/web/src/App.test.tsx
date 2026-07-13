@@ -113,7 +113,8 @@ describe("StudyBox web experience", () => {
     expect(document.querySelector("#learning-app")).toBeTruthy();
     expect(document.querySelectorAll(".scroll-rise").length).toBeGreaterThan(0);
     expect(document.querySelectorAll(".scene-stack")).toHaveLength(5);
-    expect(document.querySelectorAll(".scene-panel")).toHaveLength(4);
+    expect(document.querySelector(".three-story__canvas")).toBeTruthy();
+    expect(document.querySelectorAll(".three-story__copy")).toHaveLength(4);
     expect(document.querySelector(".deep-home__visual")).toBeNull();
     expect(document.querySelector(".kinetic-story__photo")).toBeNull();
   });
