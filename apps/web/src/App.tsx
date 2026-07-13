@@ -21,6 +21,7 @@ import {
 
 import { api, ApiClientError } from "./api";
 import { useAuth } from "./auth";
+import { DeepLanding, DeepProductMockup } from "./DeepLanding";
 
 const settingsLabels = {
   mode: {
@@ -250,20 +251,22 @@ const MovingSurface = () => {
   return <canvas className="moving-surface" ref={canvasRef} aria-hidden="true" />;
 };
 
-const SiteHeader = ({ tone = "dark" }: { tone?: "dark" | "light" }) => {
+const SiteHeader = ({ tone = "dark", minimal = false }: { tone?: "dark" | "light"; minimal?: boolean }) => {
   const { user, loading } = useAuth();
 
   return (
-    <header className={`site-header site-header--${tone}`}>
+    <header className={`site-header site-header--${tone}${minimal ? " site-header--minimal" : ""}`}>
       <div className="site-header__inner container">
         <Link className="brand-link" to="/" aria-label="StudyBox AI 처음으로 이동">
           <BrandLogo />
         </Link>
-        <nav className="primary-navigation" aria-label="주요 메뉴">
-          <a href="/#story">답변 설계</a>
-          <a href="/#categories">답변 미리보기</a>
-          <a href="/#learning-app">질문 시작</a>
-        </nav>
+        {!minimal && (
+          <nav className="primary-navigation" aria-label="주요 메뉴">
+            <a href="/#story">답변 설계</a>
+            <a href="/#categories">답변 미리보기</a>
+            <a href="/#learning-app">질문 시작</a>
+          </nav>
+        )}
         {!loading && (
           <Link className="header-start" to={user ? "/app/new" : "/login?next=/app/new"}>
             {user ? "학습 시작" : "로그인"}
@@ -359,6 +362,11 @@ const LandingPage = () => {
   const [settings, setSettings] = useState<LearningSettings>(defaultLearningSettings);
 
   useEffect(() => {
+    const scrollEffectsEnabled = false;
+    if (!scrollEffectsEnabled) {
+      return;
+    }
+
     const flow = document.querySelector<HTMLElement>(".mode-flow");
     if (!flow) {
       return;
@@ -553,7 +561,7 @@ const LandingPage = () => {
   }, []);
 
   useEffect(() => {
-    const elements = Array.from(document.querySelectorAll<HTMLElement>(".page-reveal"));
+    const elements = Array.from(document.querySelectorAll<HTMLElement>(".page-reveal, .scroll-rise"));
 
     if (!("IntersectionObserver" in window)) {
       elements.forEach((element) => element.classList.add("is-visible"));
@@ -591,59 +599,24 @@ const LandingPage = () => {
       <a className="skip-link" href="#main-content">
         본문으로 건너뛰기
       </a>
-      <SiteHeader tone="light" />
-      <div className="site-scroll-progress" aria-hidden="true"><span /></div>
-      <main id="main-content" className="landing-page" tabIndex={-1}>
-        <section id="hero" className="hero hero--home scroll-scene scroll-scene--hero" aria-labelledby="home-hero-title">
-          <div className="hero-stage">
-            <div className="hero-home container">
-              <p className="hero-home__eyebrow">STUDYBOX AI</p>
-              <h1 id="home-hero-title">오늘은 무엇을<br /><span>공부해 볼까요?</span></h1>
-              <p className="hero-home__description">학습 목적과 답변 수준을 고르면, 지금 필요한 방식으로 바로 시작합니다.</p>
-              <button className="hero-home__prompt" type="button" onClick={startLearning}>
-                <span>무엇을 공부하고 싶나요?</span>
-                <b aria-hidden="true">↗</b>
-              </button>
-              <div className="hero-home__links" aria-label="학습 방식 미리보기">
-                <a href="#story">개념 설명</a>
-                <a href="#categories">문제 풀이</a>
-                <a href="#learning-app">학습 공간</a>
+      <SiteHeader tone="light" minimal />
+      <main id="main-content" className="landing-page landing-page--static" tabIndex={-1}>
+        <DeepLanding embedded />
+
+        <section id="product-tour" className="product-tour scene-stack scene-stack--tour" aria-labelledby="product-tour-title">
+          <div className="product-tour__inner">
+            <header className="product-tour__heading">
+              <div>
+                <p>REAL STUDY WORKSPACE</p>
+                <h2 id="product-tour-title">질문부터 이해까지,<br /><strong>한 화면에서 이어집니다.</strong></h2>
               </div>
-            </div>
-            <div className="hero-haze" aria-hidden="true"><span /><span /><span /><span /></div>
-            <div className="hero-grid-map" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
-            <p className="hero__opening-wordmark" aria-hidden="true">StudyBox <strong>AI</strong></p>
-            <div className="hero__inner hero__inner--wordmark container">
-              <p className="hero-announcement"><span>NEW</span> StudyBox Reasoning이 학습 목적을 더 정확하게 이해합니다.</p>
-              <div className="hero-grid">
-                <div className="hero__content">
-                  <h2 id="hero-title">StudyBox <span>AI</span></h2>
-                  <p className="hero__tagline">답을 넘어, 공부의 본질로.</p>
-                  <div className="hero-actions">
-                    <button className="hero-action-card" type="button" onClick={() => startLearning()}>
-                      <strong>Start now</strong>
-                      <span>무료로 StudyBox AI를 시작하고<br />목적에 맞는 답변을 경험하세요.</span>
-                    </button>
-                    <a className="hero-action-card" href="#categories">
-                      <strong>AI preview</strong>
-                      <span>같은 질문이 학습 모드에 따라<br />어떻게 달라지는지 확인하세요.</span>
-                    </a>
-                  </div>
-                </div>
-                <a className="hero-feature-card" href="#story">
-                  <div className="hero-feature-card__rays" aria-hidden="true">
-                    {Array.from({ length: 9 }, (_, index) => <span style={{ transform: `rotate(${index * 11 - 44}deg)` }} key={index} />)}
-                  </div>
-                  <p>StudyBox Reasoning</p>
-                  <h2>질문을 넘어<br />학습의 방향으로</h2>
-                  <span>Explore the modes →</span>
-                </a>
-              </div>
-            </div>
+              <p>대화 기록, 학습 설정, 개념 설명과 다음 문제까지 끊기지 않는 실제 StudyBox AI 학습 화면입니다.</p>
+            </header>
+            <DeepProductMockup />
           </div>
         </section>
 
-        <section id="story" className="mode-flow kinetic-story scroll-scene scroll-scene--modes" aria-labelledby="story-title">
+        <section id="story" className="mode-flow kinetic-story scroll-scene scroll-scene--modes scene-stack scene-stack--story" aria-labelledby="story-title">
           <div className="kinetic-story__stage">
             <span className="mode-flow__item kinetic-story__observer-target" aria-hidden="true" />
             <div className="kinetic-story__planes" aria-hidden="true"><i /><i /><i /><i /></div>
@@ -651,15 +624,52 @@ const LandingPage = () => {
               <span>01</span><i /><span>04</span>
             </div>
 
-            <header className="kinetic-story__intro">
-              <p>STUDYBOX REASONING</p>
-              <h2 id="story-title">질문은 하나.<br /><strong>생각은 더 멀리.</strong></h2>
-              <span>스크롤할수록 질문이 학습의 구조로 바뀝니다.</span>
+            <header className="kinetic-story__intro scroll-rise scene-panel">
+              <div className="kinetic-story__intro-copy">
+                <p>STUDYBOX REASONING</p>
+                <h2 id="story-title">질문은 하나.<br /><strong>생각은 더 멀리.</strong></h2>
+                <span>질문의 의도와 현재 수준을 읽고, 이해할 수 있는 설명의 순서로 다시 설계합니다.</span>
+              </div>
+              <div className="scene-question-card">
+                <div className="scene-question-card__top">
+                  <strong>개념 설명</strong>
+                  <div><span>중학교 2학년</span><span>보통 길이</span></div>
+                </div>
+                <div className="scene-question-card__body">
+                  <p className="scene-question-card__question">왜 음수끼리 곱하면 양수가 돼?</p>
+                  <div className="scene-question-card__answer">
+                    <b>AI</b>
+                    <div>
+                      <small>부호의 변화부터 차근차근</small>
+                      <h3>반대 방향을 다시 반대로 바꾸면,<br />원래 방향이 됩니다.</h3>
+                      <p>수직선에서 ‘음수로 곱한다’는 것은 방향을 뒤집는다는 뜻이에요.</p>
+                      <div><span>− × − = +</span><i /><span>방향을 두 번 전환</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="scene-question-card__composer"><span>이어서 질문해 보세요</span><b>↑</b></div>
+              </div>
             </header>
 
-            <div className="kinetic-story__idea" aria-hidden="true">
-              <p>Designed for learning.<br />Built around you.</p>
-              <h3>답을 주는 AI가 아니라,<br /><strong>공부를 설계하는 AI.</strong></h3>
+            <div className="kinetic-story__idea scroll-rise scene-panel" aria-hidden="true">
+              <div className="kinetic-story__idea-copy">
+                <p>DESIGNED FOR LEARNING</p>
+                <h3>답을 주는 AI가 아니라,<br /><strong>공부를 설계하는 AI.</strong></h3>
+                <span>질문이 들어오는 순간, 네 단계의 학습 설계가 동시에 시작됩니다.</span>
+              </div>
+              <div className="scene-reasoning-board">
+                {[
+                  ["01", "질문 의도", "무엇이 막혔는지 먼저 파악합니다."],
+                  ["02", "학년과 수준", "이미 아는 것에서 설명을 시작합니다."],
+                  ["03", "설명 구조", "개념·예시·확인을 알맞게 배치합니다."],
+                  ["04", "다음 학습", "바로 이어서 풀 문제를 제안합니다."]
+                ].map(([number, title, body]) => (
+                  <article key={number}>
+                    <span>{number}</span>
+                    <div><h4>{title}</h4><p>{body}</p></div>
+                  </article>
+                ))}
+              </div>
             </div>
 
             <div className="kinetic-story__core" aria-hidden="true">
@@ -670,7 +680,7 @@ const LandingPage = () => {
               <i /><i /><i />
             </div>
 
-            <div className="kinetic-story__gallery" aria-hidden="true">
+            <div className="kinetic-story__gallery scroll-rise scene-panel" aria-hidden="true">
               <header>
                 <p>FIVE LEARNING MODES</p>
                 <h3>같은 질문도,<br />배우는 방식은 다르게.</h3>
@@ -688,7 +698,7 @@ const LandingPage = () => {
               <p className="kinetic-story__gallery-note">목적과 수준을 읽고, 가장 알맞은 답변 구조를 선택합니다.</p>
             </div>
 
-            <div className="kinetic-story__workspace">
+            <div className="kinetic-story__workspace scroll-rise scene-panel">
               <header>
                 <p>YOUR LEARNING SPACE</p>
                 <h3>질문이 쌓일수록,<br /><strong>나만의 공부가 됩니다.</strong></h3>
@@ -717,7 +727,7 @@ const LandingPage = () => {
           </div>
         </section>
 
-        <section id="categories" className="section product-section scroll-scene scroll-scene--product" aria-labelledby="categories-title">
+        <section id="categories" className="section product-section scroll-scene scroll-scene--product scene-stack scene-stack--product" aria-labelledby="categories-title">
           <div className="product-section__kinetic" aria-hidden="true"><span /><span /><span /></div>
           <div className="container">
             <header className="section-heading page-reveal page-reveal--left">
@@ -731,7 +741,7 @@ const LandingPage = () => {
           </div>
         </section>
 
-        <section id="how-it-works" className="section process-section scroll-scene scroll-scene--process" aria-labelledby="how-it-works-title">
+        <section id="how-it-works" className="section process-section scroll-scene scroll-scene--process scene-stack scene-stack--process" aria-labelledby="how-it-works-title">
           <p className="process-section__word" aria-hidden="true">REASONING</p>
           <div className="container">
             <header className="section-heading page-reveal page-reveal--left">
@@ -753,7 +763,7 @@ const LandingPage = () => {
           </div>
         </section>
 
-        <section id="learning-app" className="workspace-invite scroll-scene scroll-scene--workspace" aria-labelledby="learning-app-title">
+        <section id="learning-app" className="workspace-invite scroll-scene scroll-scene--workspace scene-stack scene-stack--workspace" aria-labelledby="learning-app-title">
           <div className="workspace-invite__stage">
             <div className="workspace-invite__film" aria-hidden="true">
               <div className="workspace-invite__film-media"><MovingSurface /></div>
@@ -1078,10 +1088,11 @@ const NewConversationPage = () => {
 
   useEffect(() => {
     let active = true;
+    const draft = searchParams.get("draft")?.trim();
     api.createConversation({ settings })
       .then(({ conversation }) => {
         if (active) {
-          navigate(`/app/${conversation.id}`, { replace: true });
+          navigate(`/app/${conversation.id}${draft ? `?draft=${encodeURIComponent(draft)}` : ""}`, { replace: true });
         }
       })
       .catch((requestError) => {
@@ -1141,11 +1152,12 @@ const ChatPage = () => {
   const { user, logout } = useAuth();
   const { conversationId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [settings, setSettings] = useState<LearningSettings>(defaultLearningSettings);
-  const [question, setQuestion] = useState("");
+  const [question, setQuestion] = useState(() => searchParams.get("draft") || "");
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);

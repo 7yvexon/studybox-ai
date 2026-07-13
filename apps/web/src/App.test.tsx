@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
@@ -88,87 +88,34 @@ afterEach(() => {
 });
 
 describe("StudyBox web experience", () => {
-  it("keeps the interactive preview and sends learning into a separate authenticated workspace", async () => {
+  it("offers a practical product-led start screen and sends learning into a separate authenticated workspace", async () => {
     vi.stubGlobal("fetch", unauthenticatedFetch);
     renderAt("/");
 
-    const preview = screen.getByRole("group", { name: "학습 답변 미리보기" });
-    fireEvent.click(within(preview).getByRole("button", { name: "문제 풀이" }));
-
-    expect(within(preview).getByRole("heading", { name: "곱해서 6, 더해서 -5가 되는 수 찾기" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "질문 시작하기" }));
+    expect(screen.getByRole("heading", { level: 1, name: "StudyBox AI" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /실제 학습 화면/ })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "StudyBox AI 실제 학습 대화 화면 미리보기" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /지금 시작하기/ }));
     expect(await screen.findByRole("heading", { name: "다시 만나서 반가워요." })).toBeTruthy();
   });
 
-  it("replays upward reveals after leaving and re-entering in either scroll direction", async () => {
+  it("keeps every lower introduction section and marks content for simple rise reveals", () => {
     vi.stubGlobal("fetch", unauthenticatedFetch);
-
-    class FakeIntersectionObserver {
-      readonly root = null;
-      readonly rootMargin = "0px";
-      readonly thresholds = [0];
-      readonly elements = new Set<Element>();
-
-      constructor(readonly callback: IntersectionObserverCallback) {
-        observers.push(this);
-      }
-
-      observe(target: Element) {
-        this.elements.add(target);
-      }
-
-      unobserve(target: Element) {
-        this.elements.delete(target);
-      }
-
-      disconnect() {
-        this.elements.clear();
-      }
-
-      takeRecords(): IntersectionObserverEntry[] {
-        return [];
-      }
-    }
-
-    const observers: FakeIntersectionObserver[] = [];
-    vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
     renderAt("/");
 
-    const revealTarget = document.querySelector(".product-section .page-reveal--product");
-    const modeTarget = document.querySelector(".mode-flow__item");
-    expect(revealTarget).toBeTruthy();
-    expect(modeTarget).toBeTruthy();
-
-    await waitFor(() => {
-      expect(observers.some((observer) => observer.elements.has(revealTarget!))).toBe(true);
-      expect(observers.some((observer) => observer.elements.has(modeTarget!))).toBe(true);
-    });
-
-    const trigger = (target: Element, isIntersecting: boolean) => {
-      const observer = observers.find((candidate) => candidate.elements.has(target));
-      expect(observer).toBeTruthy();
-      act(() => {
-        observer!.callback(
-          [{ target, isIntersecting } as IntersectionObserverEntry],
-          observer as unknown as IntersectionObserver
-        );
-      });
-    };
-
-    trigger(revealTarget!, true);
-    trigger(modeTarget!, true);
-    expect(revealTarget!.classList.contains("is-visible")).toBe(true);
-    expect(modeTarget!.classList.contains("is-in-view")).toBe(true);
-
-    trigger(revealTarget!, false);
-    trigger(modeTarget!, false);
-    expect(revealTarget!.classList.contains("is-visible")).toBe(false);
-    expect(modeTarget!.classList.contains("is-in-view")).toBe(false);
-
-    trigger(revealTarget!, true);
-    trigger(modeTarget!, true);
-    expect(revealTarget!.classList.contains("is-visible")).toBe(true);
-    expect(modeTarget!.classList.contains("is-in-view")).toBe(true);
+    const landing = document.querySelector(".landing-page");
+    expect(landing?.classList.contains("landing-page--static")).toBe(true);
+    expect(document.querySelector(".site-scroll-progress")).toBeNull();
+    expect(document.querySelector("#story")).toBeTruthy();
+    expect(document.querySelector("#product-tour")).toBeTruthy();
+    expect(document.querySelector("#categories")).toBeTruthy();
+    expect(document.querySelector("#how-it-works")).toBeTruthy();
+    expect(document.querySelector("#learning-app")).toBeTruthy();
+    expect(document.querySelectorAll(".scroll-rise").length).toBeGreaterThan(0);
+    expect(document.querySelectorAll(".scene-stack")).toHaveLength(5);
+    expect(document.querySelectorAll(".scene-panel")).toHaveLength(4);
+    expect(document.querySelector(".deep-home__visual")).toBeNull();
+    expect(document.querySelector(".kinetic-story__photo")).toBeNull();
   });
 
   it("keeps login input behavior and validation attributes", async () => {
