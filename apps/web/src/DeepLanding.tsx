@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowUp, ArrowUpRight, ChatCircleDots, Plus } from "@phosphor-icons/react";
+import { ArrowRight, ArrowUp, ArrowUpRight, ChatCircleDots, Plus } from "@phosphor-icons/react";
 import { defaultLearningSettings } from "@studybox/shared";
 
 import { useAuth } from "./auth";
@@ -86,23 +86,31 @@ export const DeepLanding = ({ embedded = false }: { embedded?: boolean }) => {
       <MainTag id={embedded ? "deep-hero" : "deep-main"} className="deep-home__main">
         <section className="deep-welcome" aria-labelledby="deep-title">
           <div className="deep-welcome__copy">
-            <p className="deep-welcome__announcement"><ChatCircleDots weight="duotone" /> 나에게 맞춰 생각하는 학습 AI를 만나보세요.</p>
-            <h1 id="deep-title" className="deep-welcome__wordmark">StudyBox <strong>AI</strong></h1>
-            <p className="deep-welcome__tagline">Into better learning.</p>
-            <p className="deep-welcome__description">질문 하나로 시작해 이해와 문제 풀이까지. 학년, 목적, 답변 길이에 맞춘 나만의 학습 흐름을 만들어보세요.</p>
+            <p className="deep-welcome__announcement"><ChatCircleDots weight="duotone" /> PERSONAL STUDY WORKSPACE</p>
+            <h1 id="deep-title" className="deep-welcome__wordmark">질문을 이해로,<br /><strong>이해를 실력으로.</strong></h1>
+            <p className="deep-welcome__tagline">내 수준에 맞춰, 필요한 만큼 설명합니다.</p>
+            <p className="deep-welcome__description">StudyBox AI는 질문의 맥락과 현재 수준을 읽고, 개념부터 다음 문제까지 하나의 학습 흐름으로 이어줍니다.</p>
 
-            <div className="deep-actions" aria-label="StudyBox AI 시작 메뉴">
-              <button className="deep-action deep-action--primary" type="button" onClick={startLearning}>
-                <span><strong>지금 시작하기</strong><small>무료로 AI 학습 대화를 시작하세요.</small></span>
-                <ArrowUpRight weight="bold" aria-hidden="true" />
-              </button>
-              <a className="deep-action deep-action--secondary" href="#product-tour">
-                <span><strong>실제 학습 화면</strong><small>질문이 답변으로 이어지는 과정을 확인하세요.</small></span>
-                <ArrowUpRight weight="bold" aria-hidden="true" />
-              </a>
+            <div className="deep-hero-actions">
+              <button type="button" onClick={startLearning}>학습 시작하기 <ArrowUpRight weight="bold" aria-hidden="true" /></button>
+              <a href="#product-tour">먼저 둘러보기 <ArrowRight weight="bold" aria-hidden="true" /></a>
             </div>
-            <p className="deep-welcome__settings"><span>개념 설명</span><i /><span>중학교 2학년</span><i /><span>보통 길이</span></p>
           </div>
+
+          <ol className="deep-hero-principles" aria-label="StudyBox AI의 학습 방식">
+            <li>
+              <span>01</span>
+              <div><strong>막힌 지점부터 찾습니다.</strong><p>정답을 서두르지 않고, 질문 속에서 아직 연결되지 않은 부분을 먼저 읽습니다.</p></div>
+            </li>
+            <li>
+              <span>02</span>
+              <div><strong>이해되는 높이로 설명합니다.</strong><p>중학교 1학년부터 고등학교 3학년까지, 선택한 답변 수준에 맞춰 시작점을 조절합니다.</p></div>
+            </li>
+            <li>
+              <span>03</span>
+              <div><strong>다음 공부까지 이어줍니다.</strong><p>개념, 예시, 확인 문제와 대화 기록이 한 공간에 남아 학습의 흐름이 끊기지 않습니다.</p></div>
+            </li>
+          </ol>
         </section>
       </MainTag>
 

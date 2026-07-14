@@ -92,10 +92,12 @@ describe("StudyBox web experience", () => {
     vi.stubGlobal("fetch", unauthenticatedFetch);
     renderAt("/");
 
-    expect(screen.getByRole("heading", { level: 1, name: "StudyBox AI" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /실제 학습 화면/ })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: /질문을 이해로, 이해를 실력으로/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /먼저 둘러보기/ })).toBeTruthy();
     expect(screen.getByRole("img", { name: "StudyBox AI 실제 학습 대화 화면 미리보기" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /지금 시작하기/ }));
+    expect(screen.getByRole("list", { name: "StudyBox AI의 학습 방식" })).toBeTruthy();
+    expect(document.querySelectorAll(".deep-hero-principles li")).toHaveLength(3);
+    fireEvent.click(screen.getByRole("button", { name: /학습 시작하기/ }));
     expect(await screen.findByRole("heading", { name: "다시 만나서 반가워요." })).toBeTruthy();
   });
 
@@ -109,12 +111,12 @@ describe("StudyBox web experience", () => {
     expect(document.querySelector("#story")).toBeTruthy();
     expect(document.querySelector("#product-tour")).toBeTruthy();
     expect(document.querySelector("#categories")).toBeTruthy();
-    expect(document.querySelector("#how-it-works")).toBeTruthy();
+    expect(document.querySelector("#how-it-works")).toBeNull();
     expect(document.querySelector("#learning-app")).toBeTruthy();
     expect(document.querySelectorAll(".scroll-rise").length).toBeGreaterThan(0);
-    expect(document.querySelectorAll(".scene-stack")).toHaveLength(5);
-    expect(document.querySelector(".three-story__canvas")).toBeTruthy();
-    expect(document.querySelectorAll(".three-story__copy")).toHaveLength(4);
+    expect(document.querySelectorAll(".scene-stack")).toHaveLength(3);
+    expect(document.querySelector(".answer-blueprint")).toBeTruthy();
+    expect(document.querySelectorAll(".learning-method__steps li")).toHaveLength(4);
     expect(document.querySelector(".deep-home__visual")).toBeNull();
     expect(document.querySelector(".kinetic-story__photo")).toBeNull();
   });

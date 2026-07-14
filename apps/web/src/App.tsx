@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   Link,
   Navigate,
@@ -22,7 +22,7 @@ import {
 import { api, ApiClientError } from "./api";
 import { useAuth } from "./auth";
 import { DeepLanding, DeepProductMockup } from "./DeepLanding";
-import { ThreeLearningStory } from "./ThreeLearningStory";
+import { LearningMethod } from "./LearningMethod";
 
 const settingsLabels = {
   mode: {
@@ -115,104 +115,6 @@ const BrandLogo = () => (
     <span className="brand-name">StudyBox <strong>AI</strong></span>
   </>
 );
-
-const MovingSurface = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    if (navigator.userAgent.includes("jsdom")) {
-      return;
-    }
-
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-
-    let context: CanvasRenderingContext2D | null = null;
-    try {
-      context = canvas.getContext("2d");
-    } catch {
-      return;
-    }
-    if (!context) {
-      return;
-    }
-
-    const image = new Image();
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let frame = 0;
-    let width = 0;
-    let height = 0;
-    let pixelRatio = 1;
-
-    const resize = () => {
-      const bounds = canvas.getBoundingClientRect();
-      width = Math.max(1, bounds.width);
-      height = Math.max(1, bounds.height);
-      pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(width * pixelRatio);
-      canvas.height = Math.round(height * pixelRatio);
-    };
-
-    const draw = (time = 0) => {
-      if (!image.naturalWidth || !image.naturalHeight) {
-        return;
-      }
-
-      const camera = time / 1000;
-      const cover = Math.max(width / image.naturalWidth, height / image.naturalHeight);
-      const scale = 1.1 + Math.sin(camera * 0.34) * 0.025;
-      const drawWidth = image.naturalWidth * cover * scale;
-      const drawHeight = image.naturalHeight * cover * scale;
-      const x = (width - drawWidth) / 2 + Math.sin(camera * 0.24) * width * 0.024;
-      const y = (height - drawHeight) / 2 + Math.cos(camera * 0.19) * height * 0.018;
-
-      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      context.clearRect(0, 0, width, height);
-      context.filter = "saturate(1.08) contrast(1.05)";
-      context.globalAlpha = 1;
-      context.drawImage(image, x, y, drawWidth, drawHeight);
-
-      context.save();
-      context.globalAlpha = 0.16;
-      context.globalCompositeOperation = "screen";
-      context.filter = "blur(5px) saturate(1.22)";
-      context.translate(width / 2, height / 2);
-      context.rotate(Math.sin(camera * 0.16) * 0.012);
-      context.drawImage(
-        image,
-        -drawWidth / 2 + Math.cos(camera * 0.28) * 24,
-        -drawHeight / 2 + Math.sin(camera * 0.22) * 18,
-        drawWidth,
-        drawHeight
-      );
-      context.restore();
-      context.filter = "none";
-
-      if (!reducedMotion.matches) {
-        frame = window.requestAnimationFrame(draw);
-      }
-    };
-
-    const start = () => {
-      resize();
-      draw();
-    };
-
-    image.addEventListener("load", start, { once: true });
-    image.src = "/images/studybox-cinematic-surface.png";
-    window.addEventListener("resize", resize);
-
-    return () => {
-      image.removeEventListener("load", start);
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("resize", resize);
-    };
-  }, []);
-
-  return <canvas className="moving-surface" ref={canvasRef} aria-hidden="true" />;
-};
 
 const SiteHeader = ({ tone = "dark", minimal = false }: { tone?: "dark" | "light"; minimal?: boolean }) => {
   const { user, loading } = useAuth();
@@ -568,18 +470,20 @@ const LandingPage = () => {
 
         <section id="product-tour" className="product-tour scene-stack scene-stack--tour" aria-labelledby="product-tour-title">
           <div className="product-tour__inner">
-            <header className="product-tour__heading">
+            <header className="product-tour__heading scroll-rise">
               <div>
                 <p>REAL STUDY WORKSPACE</p>
                 <h2 id="product-tour-title">질문부터 이해까지,<br /><strong>한 화면에서 이어집니다.</strong></h2>
               </div>
-              <p>대화 기록, 학습 설정, 개념 설명과 다음 문제까지 끊기지 않는 실제 StudyBox AI 학습 화면입니다.</p>
+              <p>“답을 보고 나면 다음에는 뭘 해야 하지?”라는 고민이 남지 않도록, 대화 기록과 설정, 설명, 다음 문제를 한 흐름에 담았습니다.</p>
             </header>
-            <DeepProductMockup />
+            <div className="product-tour__mockup scroll-rise">
+              <DeepProductMockup />
+            </div>
           </div>
         </section>
 
-        <ThreeLearningStory onStart={startLearning} />
+        <LearningMethod />
 
         <section id="categories" className="answer-showcase scroll-scene scene-stack scene-stack--answer" aria-labelledby="categories-title">
           <div className="answer-showcase__inner">
@@ -599,68 +503,40 @@ const LandingPage = () => {
           </div>
         </section>
 
-        <section id="how-it-works" className="section process-section scroll-scene scroll-scene--process scene-stack scene-stack--process" aria-labelledby="how-it-works-title">
-          <p className="process-section__word" aria-hidden="true">REASONING</p>
-          <div className="container">
-            <header className="section-heading page-reveal page-reveal--left">
-              <p className="section-eyebrow">STUDYBOX FLOW</p>
-              <h2 id="how-it-works-title">질문은 쌓이고,<br />생각은 남습니다.</h2>
-            </header>
-            <ol className="process-list">
-              {[
-                ["목적 감지", "선택한 학습 모드와 질문의 의도를 함께 읽습니다."],
-                ["답변 설계", "수준과 길이에 맞춰 설명의 순서와 정보 밀도를 조절합니다."],
-                ["학습 가능한 답", "지금 이해하고, 풀고, 기억할 수 있는 구조로 답합니다."]
-              ].map(([title, content], index) => (
-                <li className={`process-item page-reveal page-reveal--delay-${index + 1}`} key={title}>
-                  <p className="process-item__number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</p>
-                  <div><h3>{title}</h3><p>{content}</p></div>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
         <section id="learning-app" className="workspace-invite scroll-scene scroll-scene--workspace scene-stack scene-stack--workspace" aria-labelledby="learning-app-title">
           <div className="workspace-invite__stage">
-            <div className="workspace-invite__film" aria-hidden="true">
-              <div className="workspace-invite__film-media"><MovingSurface /></div>
-              <p className="workspace-invite__wordmark">StudyBox <span>AI</span></p>
-              <div className="workspace-invite__surface" />
-            </div>
-            <div className="workspace-invite__lines" aria-hidden="true"><span /><span /><span /></div>
             <div className="container">
-            <header className="workspace-invite__header page-reveal page-reveal--left">
-              <p className="section-eyebrow">YOUR LEARNING SPACE</p>
-              <h2 id="learning-app-title">StudyBox <span>AI</span></h2>
-              <p>질문을 쌓고, 생각을 정리하고, 나만의 학습 흐름을 이어갑니다.</p>
-              <button className="button button--primary workspace-invite__button" type="button" onClick={startLearning}>
-                질문 시작하기 <span aria-hidden="true">↗</span>
-              </button>
-            </header>
+              <header className="workspace-invite__header page-reveal page-reveal--left">
+                <p className="section-eyebrow">YOUR LEARNING SPACE</p>
+                <h2 id="learning-app-title">질문은 쌓이고,<br /><span>공부는 이어집니다.</span></h2>
+                <p>“전에 물어본 내용은 어디에 있지?” 하고 다시 찾지 않아도 됩니다. 대화 기록과 답변 설정, 다음 질문이 내 학습 공간에 차곡차곡 남습니다.</p>
+                <button className="button button--primary workspace-invite__button" type="button" onClick={startLearning}>
+                  질문 시작하기 <span aria-hidden="true">↗</span>
+                </button>
+              </header>
 
-            <div className="workspace-preview-stage page-reveal page-reveal--product">
-              <div className="workspace-preview" aria-hidden="true">
-                <aside className="workspace-preview__sidebar">
-                  <div><BrandLogo /></div>
-                  <span>＋ 새 학습</span>
-                  <nav><i /><i /><i /><i /></nav>
-                  <footer><b>김</b><p>김학생<br /><small>스터디중학교</small></p></footer>
-                </aside>
-                <div className="workspace-preview__main">
-                  <header>
-                    <p>새 학습 대화</p>
-                    <div><span>개념 설명</span><span>중학교 2학년</span><span>보통 길이</span></div>
-                  </header>
-                  <section>
-                    <p>STUDYBOX AI</p>
-                    <h3>무엇을 공부해 볼까요?</h3>
-                    <span>학습 목적과 답변 수준에 맞춰 대화를 시작합니다.</span>
-                  </section>
-                  <footer><p>궁금한 내용을 입력하세요</p><b>↑</b></footer>
+              <div className="workspace-preview-stage page-reveal page-reveal--product">
+                <div className="workspace-preview" aria-hidden="true">
+                  <aside className="workspace-preview__sidebar">
+                    <div><BrandLogo /></div>
+                    <span>＋ 새 학습</span>
+                    <nav><i /><i /><i /><i /></nav>
+                    <footer><b>김</b><p>김학생<br /><small>스터디중학교</small></p></footer>
+                  </aside>
+                  <div className="workspace-preview__main">
+                    <header>
+                      <p>새 학습 대화</p>
+                      <div><span>개념 설명</span><span>중학교 2학년</span><span>보통 길이</span></div>
+                    </header>
+                    <section>
+                      <p>STUDYBOX AI</p>
+                      <h3>무엇을 공부해 볼까요?</h3>
+                      <span>학습 목적과 답변 수준에 맞춰 대화를 시작합니다.</span>
+                    </section>
+                    <footer><p>궁금한 내용을 입력하세요</p><b>↑</b></footer>
+                  </div>
                 </div>
               </div>
-            </div>
             </div>
           </div>
         </section>
