@@ -16,6 +16,7 @@ type StorageRepository = {
   updateConversationTitle: typeof postgresRepository.updateConversationTitle;
   deleteConversation: typeof postgresRepository.deleteConversation;
   reserveUsage: typeof postgresRepository.reserveUsage;
+  releaseUsage: typeof postgresRepository.releaseUsage;
   appendMessages: typeof postgresRepository.appendMessages;
   getConversationContext: typeof postgresRepository.getConversationContext;
 };
@@ -36,6 +37,7 @@ export const {
   updateConversationTitle,
   deleteConversation,
   reserveUsage,
+  releaseUsage,
   appendMessages,
   getConversationContext
 } = storage;

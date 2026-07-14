@@ -182,11 +182,26 @@ export const createConversation = async (userId: string, title: string, settings
   return mapConversation(conversation);
 };
 
-export const getConversation = async (userId: string, conversationId: string) => {
+export const getConversation = async (
+  userId: string,
+  conversationId: string,
+  { limit = 50, before }: { limit?: number; before?: string } = {}
+) => {
   const conversation = ownedConversation(userId, conversationId);
+  const storedMessages = messages.get(conversationId) || [];
+  const cursorIndex = before ? storedMessages.findIndex((message) => message.id === before) : storedMessages.length;
+
+  if (before && cursorIndex < 0) {
+    throw new ApiError(400, "INVALID_MESSAGE_CURSOR", "메시지 위치 정보가 올바르지 않습니다.");
+  }
+
+  const end = cursorIndex >= 0 ? cursorIndex : storedMessages.length;
+  const start = Math.max(0, end - limit);
+
   return {
     conversation: mapConversation(conversation),
-    messages: [...(messages.get(conversationId) || [])]
+    messages: storedMessages.slice(start, end),
+    nextCursor: start > 0 ? storedMessages[start].id : null
   };
 };
 
@@ -214,6 +229,18 @@ export const reserveUsage = async (userId: string, limit: number) => {
   const nextCount = count + 1;
   dailyUsage.set(key, nextCount);
   return nextCount;
+};
+
+export const releaseUsage = async (userId: string) => {
+  const key = `${userId}:${new Date().toISOString().slice(0, 10)}`;
+  const count = dailyUsage.get(key) || 0;
+
+  if (count <= 1) {
+    dailyUsage.delete(key);
+    return;
+  }
+
+  dailyUsage.set(key, count - 1);
 };
 
 export const appendMessages = async ({

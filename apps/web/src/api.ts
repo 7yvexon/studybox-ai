@@ -65,8 +65,19 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input)
     }),
-  getConversation: (id: string) =>
-    request<{ conversation: Conversation; messages: Message[] }>(`/api/conversations/${encodeURIComponent(id)}`),
+  getConversation: (id: string, options: { before?: string; limit?: number } = {}) => {
+    const query = new URLSearchParams();
+    if (options.before) {
+      query.set("before", options.before);
+    }
+    if (options.limit) {
+      query.set("limit", String(options.limit));
+    }
+    const suffix = query.size ? `?${query.toString()}` : "";
+    return request<{ conversation: Conversation; messages: Message[]; nextCursor: string | null }>(
+      `/api/conversations/${encodeURIComponent(id)}${suffix}`
+    );
+  },
   updateConversation: (id: string, title: string) =>
     request<{ conversation: Conversation }>(`/api/conversations/${encodeURIComponent(id)}`, {
       method: "PATCH",

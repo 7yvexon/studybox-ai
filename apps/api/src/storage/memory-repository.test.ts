@@ -8,6 +8,7 @@ import {
   getConversation,
   getCurrentUserBySession,
   listConversations,
+  releaseUsage,
   registerUser,
   reserveUsage,
   resetMemoryRepository
@@ -75,5 +76,47 @@ describe("memory repository", () => {
     await expect(registerUser(input)).rejects.toMatchObject({ code: "USERNAME_IN_USE" });
     await expect(reserveUsage(user.id, 1)).resolves.toBe(1);
     await expect(reserveUsage(user.id, 1)).rejects.toMatchObject({ code: "DAILY_LIMIT_REACHED" });
+    await releaseUsage(user.id);
+    await expect(reserveUsage(user.id, 1)).resolves.toBe(1);
+  });
+
+  it("returns conversation messages in fixed-size pages", async () => {
+    const user = await registerUser({
+      username: "student01",
+      passwordHash: "hashed-password",
+      realName: "김학생",
+      schoolName: "스터디중학교",
+      grade: 2,
+      classNumber: 3,
+      studentNumber: 12,
+      role: "user"
+    });
+    const conversation = await createConversation(user.id, "광합성 공부", settings);
+    const reply = {
+      title: "답변",
+      summary: "설명입니다.",
+      sections: [{ title: "핵심", content: "내용" }]
+    };
+
+    for (const question of ["첫 번째", "두 번째", "세 번째"]) {
+      await appendMessages({
+        userId: user.id,
+        conversationId: conversation.id,
+        question,
+        settings,
+        reply,
+        provider: "mock",
+        model: "studybox-development-mock"
+      });
+    }
+
+    const latest = await getConversation(user.id, conversation.id, { limit: 2 });
+    expect(latest.messages).toHaveLength(2);
+    expect(latest.messages[0].content).toBe("세 번째");
+    expect(latest.nextCursor).toBeTruthy();
+
+    const earlier = await getConversation(user.id, conversation.id, { limit: 4, before: latest.nextCursor! });
+    expect(earlier.messages.map((message) => message.content)).toEqual(["첫 번째", "설명입니다.", "두 번째", "설명입니다."]);
+    expect(earlier.nextCursor).toBeNull();
   });
 });

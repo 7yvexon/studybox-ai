@@ -51,7 +51,7 @@ const authenticatedFetch = vi.fn(async (input: RequestInfo | URL) => {
   }
 
   if (url === "/api/conversations/conversation-1") {
-    return response(200, { conversation, messages: [] });
+    return response(200, { conversation, messages: [], nextCursor: null });
   }
 
   if (url === "/api/conversations") {
@@ -129,6 +129,52 @@ afterEach(() => {
 });
 
 describe("StudyBox web experience", () => {
+  it("loads older conversation messages on demand", async () => {
+    const olderMessage = {
+      id: "message-old",
+      conversationId: conversation.id,
+      role: "user" as const,
+      content: "이전 질문입니다.",
+      settings: conversation.settings,
+      response: null,
+      provider: null,
+      model: null,
+      createdAt: "2026-07-09T00:00:00.000Z"
+    };
+    const recentMessage = {
+      ...olderMessage,
+      id: "message-recent",
+      content: "최근 질문입니다.",
+      createdAt: "2026-07-10T00:00:00.000Z"
+    };
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url === "/api/me") {
+        return response(200, { user: currentUser });
+      }
+      if (url === `/api/conversations/${conversation.id}`) {
+        return response(200, { conversation, messages: [recentMessage], nextCursor: "message-old" });
+      }
+      if (url === `/api/conversations/${conversation.id}?before=message-old`) {
+        return response(200, { conversation, messages: [olderMessage], nextCursor: null });
+      }
+      if (url === "/api/conversations") {
+        return response(200, { conversations: [conversation] });
+      }
+
+      return response(404, { error: { code: "NOT_FOUND", message: "찾을 수 없습니다." } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderAt(`/app/${conversation.id}`);
+
+    const loadEarlier = await screen.findByRole("button", { name: "이전 대화 불러오기" });
+    fireEvent.click(loadEarlier);
+
+    expect(await screen.findByText("이전 질문입니다.")).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url]) => url === `/api/conversations/${conversation.id}?before=message-old`)).toBe(true);
+  });
+
   it("offers a practical product-led start screen and sends learning into a separate authenticated workspace", async () => {
     vi.stubGlobal("fetch", unauthenticatedFetch);
     renderAt("/");

@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { defaultLearningSettings, normalizeAnswerLevel, type LearningSettings } from "@studybox/shared";
+import {
+  defaultLearningSettings,
+  normalizeAnswerLevel,
+  type ChatProvider,
+  type LearningSettings
+} from "@studybox/shared";
 import cookieParser from "cookie-parser";
 import express, { type NextFunction, type Request, type Response } from "express";
 import rateLimit from "express-rate-limit";
@@ -24,6 +29,7 @@ import {
   getConversationContext,
   listConversations,
   registerUser,
+  releaseUsage,
   reserveUsage,
   updateConversationTitle,
   checkStorageReady
@@ -52,6 +58,10 @@ const conversationSchema = z.object({
 });
 const titleSchema = z.object({ title: z.string().trim().min(1).max(120) });
 const messageSchema = z.object({ question: z.string().trim().min(1).max(2000), settings: learningSettingsSchema });
+const conversationPageSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  before: z.string().uuid().optional()
+});
 
 const asyncRoute = (handler: (request: Request, response: Response) => Promise<void>) =>
   (request: Request, response: Response, next: NextFunction) => {
@@ -79,9 +89,16 @@ const getConversationId = (request: Request) => {
   return result.data;
 };
 
-export const createApp = () => {
+export const createApp = ({
+  chatProvider,
+  aiDailyLimit
+}: {
+  chatProvider?: ChatProvider;
+  aiDailyLimit?: number;
+} = {}) => {
   const logger = pino({ level: config.logLevel });
-  const provider = createChatProvider(config);
+  const provider = chatProvider || createChatProvider(config);
+  const dailyUsageLimit = aiDailyLimit ?? config.aiDailyLimit;
   const app = express();
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -254,7 +271,11 @@ export const createApp = () => {
     "/api/conversations/:conversationId",
     requireAuth,
     asyncRoute(async (request, response) => {
-      response.json(await getConversation(getUser(request).id, getConversationId(request)));
+      const page = conversationPageSchema.safeParse(request.query);
+      if (!page.success) {
+        throw new ApiError(400, "VALIDATION_ERROR", "입력 내용을 다시 확인해 주세요.");
+      }
+      response.json(await getConversation(getUser(request).id, getConversationId(request), page.data));
     })
   );
 
@@ -293,22 +314,31 @@ export const createApp = () => {
       const user = getUser(request);
       const conversationId = getConversationId(request);
       const context = await getConversationContext(user.id, conversationId);
-      await reserveUsage(user.id, config.aiDailyLimit);
-      const generated = await provider.generateReply({
-        question: input.question,
-        settings: input.settings,
-        conversation: context
-      });
-      const messages = await appendMessages({
-        userId: user.id,
-        conversationId,
-        question: input.question,
-        settings: input.settings,
-        reply: generated.reply,
-        provider: provider.name,
-        model: provider.model
-      });
-      response.status(201).json({ ...messages, usageLimit: config.aiDailyLimit });
+      await reserveUsage(user.id, dailyUsageLimit);
+      try {
+        const generated = await provider.generateReply({
+          question: input.question,
+          settings: input.settings,
+          conversation: context
+        });
+        const messages = await appendMessages({
+          userId: user.id,
+          conversationId,
+          question: input.question,
+          settings: input.settings,
+          reply: generated.reply,
+          provider: provider.name,
+          model: provider.model
+        });
+        response.status(201).json({ ...messages, usageLimit: dailyUsageLimit });
+      } catch (error) {
+        try {
+          await releaseUsage(user.id);
+        } catch (releaseError) {
+          request.log.error({ error: releaseError }, "failed to release AI usage");
+        }
+        throw error;
+      }
     })
   );
 

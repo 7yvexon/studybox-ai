@@ -134,6 +134,12 @@ export const registerUser = async ({
     );
 
     return mapUser(result.rows[0]);
+  }).catch((error: unknown) => {
+    if (typeof error === "object" && error && "code" in error && error.code === "23505") {
+      throw new ApiError(409, "USERNAME_IN_USE", "이미 사용 중인 아이디입니다.");
+    }
+
+    throw error;
   });
 
 export const deleteUser = async (userId: string) => {
@@ -181,7 +187,11 @@ export const createConversation = async (userId: string, title: string, settings
   return mapConversation(result.rows[0]);
 };
 
-export const getConversation = async (userId: string, conversationId: string) => {
+export const getConversation = async (
+  userId: string,
+  conversationId: string,
+  { limit = 50, before }: { limit?: number; before?: string } = {}
+) => {
   const conversationResult = await query<ConversationRow>(
     `SELECT conversations.*, NULL::TEXT AS last_message_preview
      FROM conversations WHERE id = $1 AND user_id = $2`,
@@ -193,12 +203,33 @@ export const getConversation = async (userId: string, conversationId: string) =>
     throw new ApiError(404, "CONVERSATION_NOT_FOUND", "대화를 찾을 수 없습니다.");
   }
 
-  const messages = await query<MessageRow>(
-    "SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC",
-    [conversationId]
-  );
+  const cursor = before
+    ? await query<Pick<MessageRow, "created_at" | "id">>(
+        "SELECT id, created_at FROM messages WHERE id = $1 AND conversation_id = $2",
+        [before, conversationId]
+      )
+    : null;
 
-  return { conversation: mapConversation(conversation), messages: messages.rows.map(mapMessage) };
+  if (before && !cursor?.rows[0]) {
+    throw new ApiError(400, "INVALID_MESSAGE_CURSOR", "메시지 위치 정보가 올바르지 않습니다.");
+  }
+
+  const messages = await query<MessageRow>(
+    `SELECT * FROM messages
+     WHERE conversation_id = $1
+       AND ($2::timestamptz IS NULL OR (created_at, id) < ($2, $3::uuid))
+     ORDER BY created_at DESC, id DESC
+     LIMIT $4`,
+    [conversationId, cursor?.rows[0]?.created_at ?? null, before ?? null, limit + 1]
+  );
+  const hasMore = messages.rows.length > limit;
+  const page = messages.rows.slice(0, limit).reverse().map(mapMessage);
+
+  return {
+    conversation: mapConversation(conversation),
+    messages: page,
+    nextCursor: hasMore ? page[0]?.id ?? null : null
+  };
 };
 
 export const updateConversationTitle = async (userId: string, conversationId: string, title: string) => {
@@ -244,6 +275,20 @@ export const reserveUsage = async (userId: string, limit: number) => {
   }
 
   return result.rows[0].request_count;
+};
+
+export const releaseUsage = async (userId: string) => {
+  await query(
+    `DELETE FROM daily_usage
+     WHERE user_id = $1 AND usage_date = CURRENT_DATE AND request_count <= 1`,
+    [userId]
+  );
+  await query(
+    `UPDATE daily_usage
+     SET request_count = request_count - 1
+     WHERE user_id = $1 AND usage_date = CURRENT_DATE AND request_count > 1`,
+    [userId]
+  );
 };
 
 export const appendMessages = async ({

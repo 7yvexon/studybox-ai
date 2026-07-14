@@ -957,11 +957,13 @@ const ChatPage = () => {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [nextMessageCursor, setNextMessageCursor] = useState<string | null>(null);
   const [settings, setSettings] = useState<LearningSettings>(defaultLearningSettings);
   const [question, setQuestion] = useState(() => searchParams.get("draft") || "");
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [error, setError] = useState("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -982,6 +984,7 @@ const ChatPage = () => {
       }
       setConversation(result.conversation);
       setMessages(result.messages);
+      setNextMessageCursor(result.nextCursor);
       setSettings(result.conversation.settings);
       setTitle(result.conversation.title);
       await refreshList();
@@ -1035,6 +1038,24 @@ const ChatPage = () => {
       setError(getErrorMessage(requestError));
     } finally {
       setSending(false);
+    }
+  };
+
+  const loadEarlierMessages = async () => {
+    if (!conversationId || !nextMessageCursor || sending || loadingEarlier) {
+      return;
+    }
+
+    setLoadingEarlier(true);
+    setError("");
+    try {
+      const result = await api.getConversation(conversationId, { before: nextMessageCursor });
+      setMessages((current) => [...result.messages, ...current]);
+      setNextMessageCursor(result.nextCursor);
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setLoadingEarlier(false);
     }
   };
 
@@ -1165,6 +1186,11 @@ const ChatPage = () => {
 
           <div className="chat-conversation">
             <div className="chat-conversation__inner">
+              {nextMessageCursor && (
+                <button className="chat-load-earlier" type="button" onClick={loadEarlierMessages} disabled={sending || loadingEarlier}>
+                  {loadingEarlier ? "이전 대화를 불러오는 중…" : "이전 대화 불러오기"}
+                </button>
+              )}
               {!messages.length && (
                 <div className="chat-empty-state workspace-empty">
                   <span className="workspace-empty__mark" aria-hidden="true"><BrandLogo /></span>
