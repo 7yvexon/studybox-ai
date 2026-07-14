@@ -133,12 +133,15 @@ describe("StudyBox web experience", () => {
     vi.stubGlobal("fetch", unauthenticatedFetch);
     renderAt("/");
 
-    expect(screen.getByRole("heading", { level: 1, name: /질문을 이해로, 이해를 실력으로/ })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /먼저 둘러보기/ })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "StudyBox AI" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /답변 먼저 보기/ })).toBeTruthy();
     expect(screen.getByRole("img", { name: "StudyBox AI 실제 학습 대화 화면 미리보기" })).toBeTruthy();
-    expect(screen.getByRole("list", { name: "StudyBox AI의 학습 방식" })).toBeTruthy();
-    expect(document.querySelectorAll(".deep-hero-principles li")).toHaveLength(3);
-    fireEvent.click(screen.getByRole("button", { name: /학습 시작하기/ }));
+    expect(screen.getByRole("list", { name: "StudyBox AI 핵심 기능" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "StudyBox AI 자동 학습 데모" })).toBeTruthy();
+    expect(document.querySelectorAll(".deep-entry")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "자동 데모 2단계: 수준 맞춤" }));
+    expect(document.querySelector(".deep-product")?.getAttribute("data-demo-stage")).toBe("1");
+    fireEvent.click(screen.getByRole("button", { name: /바로 학습하기/ }));
     expect(await screen.findByRole("heading", { name: "다시 만나서 반가워요." })).toBeTruthy();
   });
 
@@ -151,6 +154,7 @@ describe("StudyBox web experience", () => {
     expect(document.querySelector(".site-scroll-progress")).toBeNull();
     expect(document.querySelector("#story")).toBeTruthy();
     expect(document.querySelector("#product-tour")).toBeTruthy();
+    expect(document.querySelector("#spectrum")).toBeNull();
     expect(document.querySelector("#categories")).toBeTruthy();
     expect(document.querySelector("#how-it-works")).toBeNull();
     expect(document.querySelector("#learning-app")).toBeTruthy();
@@ -158,6 +162,12 @@ describe("StudyBox web experience", () => {
     expect(document.querySelectorAll(".scene-stack")).toHaveLength(3);
     expect(document.querySelector(".answer-blueprint")).toBeTruthy();
     expect(document.querySelectorAll(".learning-method__steps li")).toHaveLength(4);
+    expect(screen.getByText(/빛에너지를 생물이 사용할 수 있는 에너지로 바꾸는 과정/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "문제 풀이" }));
+    expect(screen.getByText(/인수분해 문제에서는/)).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /자동 데모 [1-4]단계/ })).toHaveLength(4);
+    expect(screen.getByRole("region", { name: "StudyBox AI 대화 예시" })).toBeTruthy();
+    expect(document.querySelector(".closing-conversation__answer")).toBeTruthy();
     expect(document.querySelector(".deep-home__visual")).toBeNull();
     expect(document.querySelector(".kinetic-story__photo")).toBeNull();
   });

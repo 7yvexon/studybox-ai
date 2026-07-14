@@ -18,10 +18,12 @@ import {
   type LearningSettings,
   type Message
 } from "@studybox/shared";
+import { ArrowRight, ArrowUp, ArrowUpRight, ChatCircleDots } from "@phosphor-icons/react";
 
 import { api, ApiClientError } from "./api";
 import { useAuth } from "./auth";
-import { DeepLanding, DeepProductMockup } from "./DeepLanding";
+import { DeepLanding } from "./DeepLanding";
+import { CapabilityStrip, ProductDemo } from "./LandingHighlights";
 import { LearningMethod } from "./LearningMethod";
 
 const settingsLabels = {
@@ -50,57 +52,69 @@ const previewResponses: Record<
     title: string;
     summary: string;
     sections: Array<{ title: string; content: string }>;
+    closing: string;
+    followUps: string[];
   }
 > = {
   concept: {
     question: "광합성 과정을 쉽게 설명해 줘",
-    title: "빛을 에너지로 바꾸는 식물의 과정",
-    summary: "광합성은 식물이 햇빛을 이용해 스스로 먹을 것을 만드는 과정이에요.",
+    title: "광합성은 빛의 힘을 포도당에 저장하는 과정이에요",
+    summary: "식물은 햇빛을 그대로 먹는 것이 아니라, 빛에서 얻은 에너지로 물과 이산화탄소를 포도당으로 바꿔요. 만들어진 포도당은 식물이 자라고 살아가는 데 필요한 에너지원이 됩니다.",
     sections: [
-      { title: "준비물", content: "햇빛, 물, 이산화탄소가 필요해요." },
-      { title: "일어나는 일", content: "잎의 엽록체가 빛을 받아 포도당과 산소를 만들어요." },
-      { title: "한 줄 정리", content: "식물은 빛 에너지를 저장 가능한 화학 에너지로 바꿔요." }
-    ]
+      { title: "재료는 어디서 올까요?", content: "뿌리는 흙에서 물을 흡수하고, 잎은 기공을 통해 공기 중의 이산화탄소를 받아들여요. 햇빛은 잎 속 엽록체의 엽록소가 흡수합니다." },
+      { title: "잎 안에서는 무슨 일이 일어날까요?", content: "엽록체는 빛에너지를 이용해 물과 이산화탄소를 포도당으로 바꿔요. 이 과정에서 식물이 사용하고 남은 산소가 밖으로 나옵니다." },
+      { title: "왜 중요한가요?", content: "포도당에는 빛에서 얻은 에너지가 화학 에너지 형태로 저장돼요. 식물은 이 에너지로 자라고, 다른 생물도 식물을 먹으며 에너지를 얻습니다." }
+    ],
+    closing: "정리하면 광합성은 ‘빛에너지를 생물이 사용할 수 있는 에너지로 바꾸는 과정’이라고 기억하면 좋아요.",
+    followUps: ["명반응과 암반응도 알려줘", "광합성 확인 문제 풀기"]
   },
   solve: {
     question: "이차방정식 x²-5x+6=0을 풀어 줘",
-    title: "곱해서 6, 더해서 -5가 되는 수 찾기",
-    summary: "식을 인수분해하면 해를 빠르고 정확하게 확인할 수 있어요.",
+    title: "인수분해하면 두 해를 차근차근 찾을 수 있어요",
+    summary: "이 식은 x²의 계수가 1이므로, 곱해서 6이 되고 더해서 -5가 되는 두 수를 찾으면 됩니다. 두 수는 -2와 -3이에요.",
     sections: [
-      { title: "조건 확인", content: "상수항은 6이고 일차항의 계수는 -5예요." },
-      { title: "단계별 풀이", content: "(x-2)(x-3)=0으로 인수분해해요." },
-      { title: "정답 점검", content: "따라서 x=2 또는 x=3이에요." }
-    ]
+      { title: "1. 식을 인수분해해요", content: "x²-5x+6은 (x-2)(x-3)으로 묶을 수 있어요. 실제로 두 괄호를 전개하면 x²-3x-2x+6이 되어 원래 식과 같아집니다." },
+      { title: "2. 각 괄호를 0으로 만들어요", content: "두 수의 곱이 0이라면 둘 중 하나는 반드시 0이어야 해요. 따라서 x-2=0 또는 x-3=0으로 나눠 생각할 수 있습니다." },
+      { title: "3. 답을 확인해요", content: "x=2와 x=3을 원래 식에 넣으면 두 경우 모두 0이 돼요. 그래서 이 방정식의 해는 x=2 또는 x=3입니다." }
+    ],
+    closing: "인수분해 문제에서는 ‘곱은 상수항, 합은 일차항의 계수’가 되는 두 수를 먼저 찾으면 풀이가 빨라져요.",
+    followUps: ["인수분해가 안 될 때는?", "비슷한 문제 하나 더"]
   },
   summary: {
     question: "조선 후기 경제 변화를 핵심만 요약해 줘",
-    title: "상품 화폐 경제가 빠르게 성장했어요",
-    summary: "농업 생산력과 시장이 성장하면서 상업과 수공업의 모습도 달라졌어요.",
+    title: "생산이 늘고 시장이 연결되면서 상품 화폐 경제가 성장했어요",
+    summary: "조선 후기에는 농업 생산량이 늘고 장시와 포구가 발달했어요. 사람들이 필요한 물건을 시장에서 사고파는 일이 많아지면서 화폐 사용과 전문 상인의 활동도 함께 커졌습니다.",
     sections: [
-      { title: "농업", content: "모내기법이 널리 퍼지고 상품 작물 재배가 늘었어요." },
-      { title: "상업", content: "장시와 포구가 성장하고 사상인의 활동이 활발해졌어요." },
-      { title: "핵심 키워드", content: "광작, 장시, 사상, 상품 화폐 경제를 기억하세요." }
-    ]
+      { title: "농업 생산의 변화", content: "모내기법이 널리 퍼지고 일부 농민은 넓은 땅을 경작하는 광작을 했어요. 시장에 내다 팔기 위한 인삼, 담배 같은 상품 작물 재배도 늘었습니다." },
+      { title: "시장과 상인의 성장", content: "정기 시장인 장시와 물류 중심지인 포구가 성장했고, 사상과 보부상이 지역 사이의 상품 유통을 맡았어요. 덕분에 서로 떨어진 시장도 점차 연결됐습니다." },
+      { title: "시험에서 연결할 흐름", content: "생산력 증가 → 상품 작물 재배 → 장시와 포구 성장 → 화폐 유통 확대 순서로 이해하면 경제 변화의 흐름을 기억하기 쉬워요." }
+    ],
+    closing: "핵심 키워드는 광작, 상품 작물, 장시, 포구, 사상, 상품 화폐 경제입니다.",
+    followUps: ["대동법과도 연결해 줘", "시험용 표로 정리해 줘"]
   },
   exam: {
     question: "중간고사 전에 세포 분열을 정리해 줘",
-    title: "체세포 분열과 감수 분열을 구분해요",
-    summary: "시험에서는 분열 횟수, 만들어지는 세포 수, 염색체 수를 비교하는 문제가 자주 나와요.",
+    title: "체세포 분열과 감수 분열은 목적과 결과가 달라요",
+    summary: "체세포 분열은 몸의 성장과 회복을 위해 같은 세포를 만들고, 감수 분열은 생식세포를 만들기 위해 염색체 수를 절반으로 줄여요. 시험에서는 분열 횟수와 결과 세포 수를 함께 비교하는 문제가 자주 나옵니다.",
     sections: [
-      { title: "암기 포인트", content: "체세포 분열은 1회, 감수 분열은 연속 2회 진행돼요." },
-      { title: "자주 틀리는 부분", content: "감수 분열 결과의 염색체 수는 모세포의 절반이에요." },
-      { title: "예상 문제", content: "두 분열의 결과 세포 수와 유전적 차이를 비교해 보세요." }
-    ]
+      { title: "체세포 분열", content: "한 번 분열해 유전적으로 같은 두 세포를 만들어요. 결과 세포의 염색체 수는 모세포와 같고, 성장하거나 상처를 회복할 때 이용됩니다." },
+      { title: "감수 분열", content: "연속 두 번 분열해 네 개의 생식세포를 만들어요. 결과 세포의 염색체 수는 모세포의 절반이며, 세포마다 유전 정보의 조합도 달라집니다." },
+      { title: "자주 틀리는 부분", content: "DNA가 복제되는 횟수와 세포가 분열하는 횟수를 구분해야 해요. 감수 분열은 DNA를 한 번 복제한 뒤 세포 분열을 두 번 진행합니다." }
+    ],
+    closing: "문제를 풀 때는 ‘목적, 분열 횟수, 세포 수, 염색체 수’ 네 항목을 표처럼 비교해 보세요.",
+    followUps: ["비교표로 다시 보여줘", "시험 문제 3개 내 줘"]
   },
   performance: {
     question: "플라스틱 사용을 주제로 발표 개요를 만들어 줘",
-    title: "문제 제기부터 실천 제안까지 연결해요",
-    summary: "자료를 나열하기보다 원인, 영향, 해결책이 이어지는 구조가 설득력을 높여요.",
+    title: "문제 제기부터 실천 제안까지 자연스럽게 연결해요",
+    summary: "자료를 많이 보여주는 것보다 ‘왜 문제인지, 우리 생활에 어떤 영향을 주는지, 무엇을 바꿀 수 있는지’가 이어지는 구성이 더 설득력 있어요. 5분 발표라면 핵심 사례 하나를 중심으로 내용을 좁히는 것이 좋습니다.",
     sections: [
-      { title: "도입", content: "일상에서 버려지는 플라스틱의 규모를 짧은 사례로 보여줘요." },
-      { title: "본론", content: "환경 영향과 개인·학교·기업의 해결책을 근거와 함께 제시해요." },
-      { title: "마무리", content: "청중이 오늘부터 실천할 수 있는 행동을 한 가지 제안해요." }
-    ]
+      { title: "도입: 내 생활에서 시작하기", content: "하루 동안 사용한 일회용 플라스틱을 직접 세어 본 경험이나 사진으로 시작해요. 가까운 사례는 청중이 문제를 자기 일처럼 느끼게 합니다." },
+      { title: "본론: 원인과 영향을 연결하기", content: "편리함 때문에 사용량이 늘어난 원인과, 잘 분해되지 않아 생태계에 남는 영향을 자료로 설명해요. 개인, 학교, 기업이 할 수 있는 해결책도 각각 한 가지씩 제시합니다." },
+      { title: "마무리: 하나의 행동을 남기기", content: "여러 실천을 나열하기보다 ‘이번 주에는 교내 매점에서 일회용 컵을 줄이자’처럼 바로 실행할 수 있는 행동 하나를 제안해요." }
+    ],
+    closing: "발표 자료에는 문장 전체보다 핵심 수치와 사진을 넣고, 자세한 설명은 말로 전달하면 집중도가 높아져요.",
+    followUps: ["5분 발표 대본도 써 줘", "슬라이드 순서 추천해 줘"]
   }
 };
 
@@ -183,7 +197,7 @@ const Footer = () => (
         </Link>
         <p>질문은 하나, 공부는 내 방식대로.</p>
       </div>
-      <p>StudyBox AI Beta · {new Date().getFullYear()}</p>
+      <p>StudyBox AI 시험 운영 · {new Date().getFullYear()}</p>
     </div>
   </footer>
 );
@@ -208,11 +222,11 @@ const LearningPreview = ({
     >
       <div className="product-preview__chrome" aria-hidden="true">
         <span>StudyBox AI</span>
-        <span>학습 미리보기</span>
+        <span>답변 미리보기</span>
       </div>
       <div className="product-preview__layout">
         <div className="product-preview__settings">
-          <p>학습 모드</p>
+          <p>답변 방식</p>
           <div className="product-preview__modes" aria-label="미리보기 학습 모드">
             {(Object.entries(settingsLabels.mode) as Array<[LearningMode, string]>).map(([value, label]) => (
               <button
@@ -233,19 +247,30 @@ const LearningPreview = ({
             <p>{response.question}</p>
           </div>
         </div>
-        <article className="product-preview__answer" aria-live="polite">
+        <article className="product-preview__answer" key={mode} aria-live="polite">
+          <div className="product-preview__assistant">
+            <span aria-hidden="true"><ChatCircleDots weight="fill" /></span>
+            <div><strong>StudyBox AI</strong><small>현재 설정에 맞춰 설명했어요</small></div>
+          </div>
           <p className="product-preview__eyebrow">
             {settingsLabels.mode[mode]} · 중학교 2학년 · 보통 길이
           </p>
           <h3>{response.title}</h3>
           <p className="product-preview__summary">{response.summary}</p>
           <div className="product-preview__sections">
-            {response.sections.map((section) => (
+            {response.sections.map((section, index) => (
               <section key={section.title}>
-                <h4>{section.title}</h4>
-                <p>{section.content}</p>
+                <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+                <div><h4>{section.title}</h4><p>{section.content}</p></div>
               </section>
             ))}
+          </div>
+          <p className="product-preview__closing">{response.closing}</p>
+          <div className="product-preview__followups">
+            <span>이어서 물어보기</span>
+            <ul aria-label="이어서 물어볼 수 있는 질문">
+              {response.followUps.map((question) => <li key={question}>{question}</li>)}
+            </ul>
           </div>
         </article>
       </div>
@@ -471,7 +496,7 @@ const LandingPage = () => {
           entry.target.classList.toggle("is-visible", entry.isIntersecting);
         });
       },
-      { threshold: 0.14, rootMargin: "0px 0px -8% 0px" }
+      { threshold: 0.08, rootMargin: "0px 0px -5% 0px" }
     );
 
     elements.forEach((element) => observer.observe(element));
@@ -499,18 +524,19 @@ const LandingPage = () => {
       <SiteHeader tone="light" minimal />
       <main id="main-content" className="landing-page landing-page--static" tabIndex={-1}>
         <DeepLanding embedded />
+        <CapabilityStrip />
 
         <section id="product-tour" className="product-tour scene-stack scene-stack--tour" aria-labelledby="product-tour-title">
           <div className="product-tour__inner">
             <header className="product-tour__heading scroll-rise">
               <div>
-                <p>REAL STUDY WORKSPACE</p>
-                <h2 id="product-tour-title">질문부터 이해까지,<br /><strong>한 화면에서 이어집니다.</strong></h2>
+                <p>실제 학습 화면</p>
+                <h2 id="product-tour-title">질문하면,<br /><strong>설명이 차근차근 이어져요.</strong></h2>
               </div>
-              <p>“답을 보고 나면 다음에는 뭘 해야 하지?”라는 고민이 남지 않도록, 대화 기록과 설정, 설명, 다음 문제를 한 흐름에 담았습니다.</p>
+              <p>답만 툭 보여주지 않아요. 어디에서 막혔는지 살펴보고, 익숙한 예시와 확인 문제까지 한 대화 안에서 이어갑니다.</p>
             </header>
             <div className="product-tour__mockup scroll-rise">
-              <DeepProductMockup />
+              <ProductDemo />
             </div>
           </div>
         </section>
@@ -521,12 +547,12 @@ const LandingPage = () => {
           <div className="answer-showcase__inner">
             <header className="answer-showcase__header scroll-rise">
               <div className="answer-showcase__title">
-                <p>ANSWER PREVIEW</p>
-                <h2 id="categories-title">같은 질문도,<br /><strong>목적에 따라 다르게.</strong></h2>
+                <p>답변 미리보기</p>
+                <h2 id="categories-title">같은 질문도,<br /><strong>내가 원하는 방식으로.</strong></h2>
               </div>
               <p className="answer-showcase__note">
-                <b>직접 바꿔보세요</b>
-                개념 설명부터 수행평가까지. 모드를 선택하면 답변의 시작점과 정보 밀도, 설명 순서가 함께 달라집니다.
+                <b>버튼을 눌러 비교해 보세요</b>
+                쉽게 이해하고 싶을 때, 시험 전에 정리하고 싶을 때, 발표를 준비할 때 필요한 답은 서로 달라요.
               </p>
             </header>
             <div className="answer-showcase__preview scroll-rise">
@@ -537,36 +563,45 @@ const LandingPage = () => {
 
         <section id="learning-app" className="workspace-invite scroll-scene scroll-scene--workspace scene-stack scene-stack--workspace" aria-labelledby="learning-app-title">
           <div className="workspace-invite__stage">
-            <div className="container">
+            <div className="workspace-invite__inner">
               <header className="workspace-invite__header page-reveal page-reveal--left">
-                <p className="section-eyebrow">YOUR LEARNING SPACE</p>
-                <h2 id="learning-app-title">질문은 쌓이고,<br /><span>공부는 이어집니다.</span></h2>
-                <p>“전에 물어본 내용은 어디에 있지?” 하고 다시 찾지 않아도 됩니다. 대화 기록과 답변 설정, 다음 질문이 내 학습 공간에 차곡차곡 남습니다.</p>
-                <button className="button button--primary workspace-invite__button" type="button" onClick={startLearning}>
-                  질문 시작하기 <span aria-hidden="true">↗</span>
-                </button>
+                <p className="section-eyebrow">지금 막힌 게 있다면</p>
+                <h2 id="learning-app-title">그 질문부터,<br /><span>같이 풀어봐요.</span></h2>
+                <p>완벽한 문장으로 묻지 않아도 괜찮아요. 지금 아는 만큼만 적으면, 헷갈린 지점부터 찾아 이해되는 말로 다시 설명해 드릴게요.</p>
+                <p className="workspace-invite__assurance">학년과 답변 방식은 대화 중에도 언제든 바꿀 수 있어요.</p>
+                <div className="workspace-invite__actions">
+                  <button className="button button--primary workspace-invite__button" type="button" onClick={startLearning}>
+                    내 질문으로 시작하기 <ArrowUpRight weight="bold" aria-hidden="true" />
+                  </button>
+                  <a className="workspace-invite__secondary" href="#categories">
+                    답변 예시 다시 보기 <ArrowRight weight="bold" aria-hidden="true" />
+                  </a>
+                </div>
               </header>
 
-              <div className="workspace-preview-stage page-reveal page-reveal--product">
-                <div className="workspace-preview" aria-hidden="true">
-                  <aside className="workspace-preview__sidebar">
+              <div className="closing-conversation-stage page-reveal page-reveal--product">
+                <div className="closing-conversation" role="region" aria-label="StudyBox AI 대화 예시">
+                  <header>
                     <div><BrandLogo /></div>
-                    <span>＋ 새 학습</span>
-                    <nav><i /><i /><i /><i /></nav>
-                    <footer><b>김</b><p>김학생<br /><small>스터디중학교</small></p></footer>
-                  </aside>
-                  <div className="workspace-preview__main">
-                    <header>
-                      <p>새 학습 대화</p>
-                      <div><span>개념 설명</span><span>중학교 2학년</span><span>보통 길이</span></div>
-                    </header>
-                    <section>
-                      <p>STUDYBOX AI</p>
-                      <h3>무엇을 공부해 볼까요?</h3>
-                      <span>학습 목적과 답변 수준에 맞춰 대화를 시작합니다.</span>
-                    </section>
-                    <footer><p>궁금한 내용을 입력하세요</p><b>↑</b></footer>
+                    <span><i aria-hidden="true" /> 답변 준비됨</span>
+                  </header>
+                  <div className="closing-conversation__body">
+                    <p className="closing-conversation__question">왜 음수끼리 곱하면 양수가 되는지 아직도 헷갈려.</p>
+                    <article className="closing-conversation__answer">
+                      <span className="closing-conversation__avatar" aria-hidden="true"><ChatCircleDots weight="fill" /></span>
+                      <div>
+                        <strong>그 부분은 ‘부호’를 방향이라고 생각하면 쉬워져요.</strong>
+                        <p>음수는 방향을 반대로 바꾼다는 뜻으로 볼 수 있어요. 음수를 한 번 곱하면 방향이 한 번 바뀌고, 음수를 다시 곱하면 방향이 한 번 더 바뀌어서 원래 방향으로 돌아옵니다.</p>
+                        <p>예를 들어 <b>-3 × -2</b>는 ‘-3을 반대 방향으로 2번 움직인다’고 생각할 수 있어서 결과가 <b>+6</b>이 돼요.</p>
+                        <div className="closing-conversation__key">방향을 한 번 바꾸면 음수, 두 번 바꾸면 다시 양수</div>
+                        <div className="closing-conversation__suggestions"><span>수직선으로 보기</span><span>확인 문제 풀기</span></div>
+                      </div>
+                    </article>
                   </div>
+                  <footer className="closing-conversation__composer">
+                    <span>이어서 궁금한 내용을 입력하세요</span>
+                    <b aria-hidden="true"><ArrowUp weight="bold" /></b>
+                  </footer>
                 </div>
               </div>
             </div>
@@ -643,7 +678,7 @@ const AuthFrame = ({ children, variant }: { children: ReactNode; variant: "login
         </div>
         <div className={`auth-shell auth-shell--${variant}`}>
           <section className="auth-story" aria-label={isLogin ? "학습 이어하기" : "학습 환경 만들기"}>
-            <p className="auth-story__eyebrow">{isLogin ? "YOUR STUDY, CONTINUED" : "PERSONAL STUDY SETUP"}</p>
+            <p className="auth-story__eyebrow">{isLogin ? "다시 이어가는 공부" : "나만의 학습 설정"}</p>
             <h2>{isLogin ? <>멈춘 곳에서,<br /><strong>생각을 이어가세요.</strong></> : <>처음 한 번의 설정으로,<br /><strong>답변의 기준이 달라집니다.</strong></>}</h2>
             <p className="auth-story__description">
               {isLogin
@@ -705,7 +740,7 @@ const LoginPage = () => {
     <AuthFrame variant="login">
       <section className="auth-card" aria-labelledby="login-title">
         <div className="auth-card__topline"><span><i /> 학습 공간 연결됨</span><Link to="/">홈으로</Link></div>
-        <p className="section-eyebrow">STUDYBOX AI BETA</p>
+        <p className="section-eyebrow">StudyBox AI 시험 운영</p>
         <h1 id="login-title">다시 만나서<br />반가워요.</h1>
         <p className="auth-card__intro">계정에 로그인하고 계속하던 공부를 이어가세요.</p>
         <form className="auth-form" onSubmit={submit}>
@@ -765,8 +800,8 @@ const RegisterPage = () => {
   return (
     <AuthFrame variant="register">
       <section className="auth-card" aria-labelledby="register-title">
-        <div className="auth-card__topline"><span><i /> BETA ACCESS</span><Link to="/">홈으로</Link></div>
-        <p className="section-eyebrow">STUDYBOX AI BETA</p>
+        <div className="auth-card__topline"><span><i /> 누구나 가입 가능</span><Link to="/">홈으로</Link></div>
+        <p className="section-eyebrow">StudyBox AI 시험 운영</p>
         <h1 id="register-title">내 공부를 위한<br />계정을 만들어요.</h1>
         <p className="auth-card__intro">아이디와 학교 정보를 입력하면 바로 학습을 시작할 수 있어요. 비밀번호는 12자 이상으로 설정해 주세요.</p>
         <form className="auth-form" onSubmit={submit}>
@@ -1198,7 +1233,7 @@ const AccountPage = () => {
       <AppHeader />
       <main className="account-page">
         <section className="account-card" aria-labelledby="account-title">
-          <p className="section-eyebrow">ACCOUNT</p>
+          <p className="section-eyebrow">계정 관리</p>
           <h1 id="account-title">내 계정</h1>
           <p className="account-card__intro">{user?.username}</p>
           <p className="account-card__profile form-message">{user ? `${user.realName} · ${user.schoolName} · ${user.grade}학년 ${user.classNumber}반 ${user.studentNumber}번` : ""}</p>
