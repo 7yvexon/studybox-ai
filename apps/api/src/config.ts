@@ -25,6 +25,7 @@ const configSchema = z.object({
       message: "AI_BASE_URL must use HTTPS in production to protect the API key"
     }),
   aiModel: z.string().trim().default(""),
+  aiFallbackModels: z.string().default(""),
   aiApiKey: z.string().trim().optional(),
   aiTimeoutMs: z.coerce.number().int().min(1000).max(120000).default(30000),
   adminUserIds: z.string().default(""),
@@ -45,6 +46,7 @@ const parsed = configSchema.parse({
   aiDailyLimit: process.env.AI_DAILY_LIMIT,
   aiBaseUrl: process.env.AI_BASE_URL,
   aiModel: process.env.AI_MODEL,
+  aiFallbackModels: process.env.AI_FALLBACK_MODELS,
   aiApiKey: process.env.AI_API_KEY,
   aiTimeoutMs: process.env.AI_TIMEOUT_MS,
   adminUserIds: process.env.ADMIN_USER_IDS,
@@ -53,8 +55,15 @@ const parsed = configSchema.parse({
   cookieSecure: process.env.COOKIE_SECURE
 });
 
+export const parseAiFallbackModels = (value: string, primaryModel: string) =>
+  value
+    .split(",")
+    .map((model) => model.trim())
+    .filter((model) => model.length > 0 && model !== primaryModel);
+
 export const config = {
   ...parsed,
+  aiFallbackModels: parseAiFallbackModels(parsed.aiFallbackModels, parsed.aiModel),
   storageMode: parsed.storageMode || (parsed.nodeEnv === "production" ? "postgres" : "memory"),
   cookieSecure: parsed.cookieSecure || parsed.nodeEnv === "production",
   adminUserIdSet: new Set(

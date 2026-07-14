@@ -133,10 +133,25 @@ sh infra/restore.sh /srv/studybox-backups/studybox-YYYYMMDDTHHMMSSZ.sql.gz
 AI_PROVIDER=openai-compatible
 AI_BASE_URL=https://provider.example.com/v1
 AI_MODEL=provider-model-id
+AI_FALLBACK_MODELS=first-fallback-model-id,second-fallback-model-id
 AI_API_KEY=provider-secret
 ```
 
 API 키는 `.env` 또는 배포 플랫폼의 시크릿에만 저장하고, 브라우저 환경변수·React 번들·저장소에는 넣지 않습니다. 제공자가 Chat Completions 호환이 아니면 `apps/api/src/ai`에 `ChatProvider` 구현을 추가합니다.
+
+### OpenRouter 무료 우선 설정
+
+OpenRouter는 OpenAI 호환 Chat Completions API를 제공하므로 별도 어댑터 없이 연결할 수 있습니다. `AI_MODEL`을 첫 번째 모델로 사용하고, `AI_FALLBACK_MODELS`의 모델을 왼쪽부터 순서대로 자동 폴백합니다.
+
+```text
+AI_PROVIDER=openai-compatible
+AI_BASE_URL=https://openrouter.ai/api/v1
+AI_MODEL=qwen/qwen3-next-80b-a3b-instruct:free
+AI_FALLBACK_MODELS=google/gemma-4-31b-it:free,openai/gpt-oss-20b:free,qwen/qwen3.5-flash-02-23,deepseek/deepseek-v3.2
+AI_API_KEY=OpenRouter에서 새로 발급한 키
+```
+
+무료 모델은 먼저 사용하고, 제공자 장애·일시적 거절·한도 초과 시에만 뒤의 모델로 전환됩니다. OpenRouter 요청당 폴백 모델은 최대 3개까지 허용하므로, 추가 모델은 앞선 모델이 모두 실패했을 때 서버가 다음 요청으로 시도합니다. OpenRouter 계정에 누적 $10 이상 결제한 경우 `:free` 모델은 계정 전체 기준으로 하루 최대 1,000회까지 사용할 수 있습니다. 유료 모델 비용을 제한하려면 OpenRouter에서 해당 키의 월 지출 한도를 $5로 설정하세요.
 
 ## 배포 전 확인
 

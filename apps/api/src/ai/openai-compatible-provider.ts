@@ -38,6 +38,32 @@ export class OpenAiCompatibleChatProvider implements ChatProvider {
   }
 
   async generateReply(input: GenerateReplyInput): Promise<GenerateReplyResult> {
+    const attempts = [
+      { model: this.appConfig.aiModel, fallbackModels: this.appConfig.aiFallbackModels.slice(0, 3) },
+      ...this.appConfig.aiFallbackModels.slice(3).map((model) => ({ model, fallbackModels: [] }))
+    ];
+    let lastError: unknown;
+
+    for (const attempt of attempts) {
+      try {
+        return await this.generateReplyForModels(input, attempt.model, attempt.fallbackModels);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (lastError instanceof ApiError) {
+      throw lastError;
+    }
+
+    throw new ApiError(502, "AI_PROVIDER_ERROR", "AI 답변을 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+
+  private async generateReplyForModels(
+    input: GenerateReplyInput,
+    model: string,
+    fallbackModels: string[]
+  ): Promise<GenerateReplyResult> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.appConfig.aiTimeoutMs);
 
@@ -49,7 +75,10 @@ export class OpenAiCompatibleChatProvider implements ChatProvider {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: this.appConfig.aiModel,
+          model,
+          ...(fallbackModels.length > 0
+            ? { models: fallbackModels }
+            : {}),
           temperature: 0.3,
           response_format: { type: "json_object" },
           messages: [
