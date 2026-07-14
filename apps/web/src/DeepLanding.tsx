@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, ArrowUp, ArrowUpRight, ChatCircleDots, Plus } from "@phosphor-icons/react";
+import { ArrowRight, ArrowUp, BookOpenText, ChatCircleDots, Plus } from "@phosphor-icons/react";
 import { defaultLearningSettings } from "@studybox/shared";
 
 import { useAuth } from "./auth";
@@ -14,8 +14,23 @@ const DeepBrand = () => (
   </span>
 );
 
-export const DeepProductMockup = () => (
-  <div className="deep-product" role="img" aria-label="StudyBox AI 실제 학습 대화 화면 미리보기">
+const demoStatus = [
+  "어디에서 막혔는지 살펴보고 있어요",
+  "중학교 2학년 수준에 맞췄어요",
+  "익숙한 예시부터 설명을 구성했어요",
+  "이해를 확인할 다음 질문도 준비했어요"
+] as const;
+
+export const DeepProductMockup = ({ demoStage = 3 }: { demoStage?: number }) => {
+  const activeStage = Math.min(Math.max(demoStage, 0), demoStatus.length - 1);
+
+  return (
+  <div
+    className={`deep-product deep-product--demo-stage-${activeStage}`}
+    data-demo-stage={activeStage}
+    role="img"
+    aria-label="StudyBox AI 실제 학습 대화 화면 미리보기"
+  >
     <aside className="deep-product__sidebar">
       <div className="deep-product__mini-mark"><span className="brand-mark" aria-hidden="true"><i /><i /></span></div>
       <div className="deep-product__side-brand"><DeepBrand /></div>
@@ -32,25 +47,27 @@ export const DeepProductMockup = () => (
     <div className="deep-product__workspace">
       <header>
         <strong>새 학습 대화</strong>
-        <div><span>개념 설명</span><span>중학교 2학년</span><span>보통 길이</span></div>
+        <div><span>개념 설명</span><span className="deep-product__level">중학교 2학년</span><span>보통 길이</span></div>
       </header>
       <div className="deep-product__body">
         <div className="deep-product__question">일차함수의 그래프에서 기울기가 의미하는 게 뭐야?</div>
         <div className="deep-product__answer">
           <b className="deep-product__ai">AI</b>
           <div>
-            <p className="deep-product__answer-label">개념 설명 · 핵심부터</p>
-            <h2>기울기는 x가 1만큼 변할 때,<br />y가 얼마나 변하는지를 뜻해요.</h2>
-            <p>일차함수 <strong>y = ax + b</strong>에서 a가 바로 기울기입니다. a가 클수록 그래프는 더 가파르게 올라가요.</p>
+            <p className="deep-product__answer-label"><i aria-hidden="true" />{demoStatus[activeStage]}</p>
+            <h2>기울기는 그래프가 얼마나 빠르게 변하는지를 보여줘요.</h2>
+            <p>예를 들어 <strong>y = 2x + 1</strong>에서는 x가 1 늘어날 때 y가 2 늘어나요. 그래서 이 그래프의 기울기는 2입니다.</p>
+            <p className="deep-product__answer-detail">같은 거리만큼 오른쪽으로 갔을 때 y가 더 크게 변할수록 선은 가파르고, 기울기가 음수라면 오른쪽으로 갈수록 내려갑니다.</p>
             <div className="deep-product__formula"><strong>y = 2x + 1</strong><span>x +1 → y +2</span><i aria-hidden="true" /></div>
-            <div className="deep-product__suggestions"><span>예시로 더 보기</span><span>문제로 확인하기</span></div>
+            <div className="deep-product__suggestions"><span>기울기 부호도 설명해 줘</span><span>확인 문제 풀기</span></div>
           </div>
         </div>
       </div>
       <footer><span>궁금한 내용을 입력하세요</span><b><ArrowUp weight="bold" /></b></footer>
     </div>
   </div>
-);
+  );
+};
 
 export const DeepLanding = ({ embedded = false }: { embedded?: boolean }) => {
   const { user } = useAuth();
@@ -86,31 +103,26 @@ export const DeepLanding = ({ embedded = false }: { embedded?: boolean }) => {
       <MainTag id={embedded ? "deep-hero" : "deep-main"} className="deep-home__main">
         <section className="deep-welcome" aria-labelledby="deep-title">
           <div className="deep-welcome__copy">
-            <p className="deep-welcome__announcement"><ChatCircleDots weight="duotone" /> PERSONAL STUDY WORKSPACE</p>
-            <h1 id="deep-title" className="deep-welcome__wordmark">질문을 이해로,<br /><strong>이해를 실력으로.</strong></h1>
-            <p className="deep-welcome__tagline">내 수준에 맞춰, 필요한 만큼 설명합니다.</p>
-            <p className="deep-welcome__description">StudyBox AI는 질문의 맥락과 현재 수준을 읽고, 개념부터 다음 문제까지 하나의 학습 흐름으로 이어줍니다.</p>
+            <p className="deep-welcome__announcement"><ChatCircleDots weight="duotone" /> 질문을 이해하는 개인 학습 AI</p>
+            <h1 id="deep-title" className="deep-welcome__wordmark">StudyBox <strong>AI</strong></h1>
+            <p className="deep-welcome__tagline">모르는 건 편하게 묻고,<br />이해될 때까지 이어가세요.</p>
+            <p className="deep-welcome__description">질문을 완벽하게 정리하지 않아도 괜찮아요. 지금 막힌 지점과 학년을 읽고, 알아듣기 쉬운 말부터 차근차근 설명합니다.</p>
 
-            <div className="deep-hero-actions">
-              <button type="button" onClick={startLearning}>학습 시작하기 <ArrowUpRight weight="bold" aria-hidden="true" /></button>
-              <a href="#product-tour">먼저 둘러보기 <ArrowRight weight="bold" aria-hidden="true" /></a>
+            <div className="deep-entry-points">
+              <button className="deep-entry deep-entry--primary" type="button" onClick={startLearning}>
+                <span className="deep-entry__icon" aria-hidden="true"><ChatCircleDots weight="duotone" /></span>
+                <span><strong>바로 학습하기</strong><small>내 학년과 목적에 맞는 새 대화를 시작해요.</small></span>
+                <ArrowRight weight="bold" aria-hidden="true" />
+              </button>
+              <a className="deep-entry" href="#product-tour">
+                <span className="deep-entry__icon" aria-hidden="true"><BookOpenText weight="duotone" /></span>
+                <span><strong>답변 먼저 보기</strong><small>질문이 설명으로 바뀌는 과정을 살펴봐요.</small></span>
+                <ArrowRight weight="bold" aria-hidden="true" />
+              </a>
             </div>
-          </div>
 
-          <ol className="deep-hero-principles" aria-label="StudyBox AI의 학습 방식">
-            <li>
-              <span>01</span>
-              <div><strong>막힌 지점부터 찾습니다.</strong><p>정답을 서두르지 않고, 질문 속에서 아직 연결되지 않은 부분을 먼저 읽습니다.</p></div>
-            </li>
-            <li>
-              <span>02</span>
-              <div><strong>이해되는 높이로 설명합니다.</strong><p>중학교 1학년부터 고등학교 3학년까지, 선택한 답변 수준에 맞춰 시작점을 조절합니다.</p></div>
-            </li>
-            <li>
-              <span>03</span>
-              <div><strong>다음 공부까지 이어줍니다.</strong><p>개념, 예시, 확인 문제와 대화 기록이 한 공간에 남아 학습의 흐름이 끊기지 않습니다.</p></div>
-            </li>
-          </ol>
+            <p className="deep-welcome__promise">학년별 설명 · 단계별 풀이 · 이어지는 후속 질문</p>
+          </div>
         </section>
       </MainTag>
 

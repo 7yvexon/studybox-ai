@@ -39,10 +39,10 @@ export const LearningMethod = () => (
     <div className="learning-method__inner">
       <header className="learning-method__header scroll-rise">
         <div>
-          <p>THE STUDYBOX METHOD</p>
-          <h2 id="learning-method-title">좋은 답은,<br /><strong>순서가 다릅니다.</strong></h2>
+          <p>StudyBox의 답변 방식</p>
+          <h2 id="learning-method-title">잘 이해되는 답은,<br /><strong>시작부터 다릅니다.</strong></h2>
         </div>
-        <p>바로 설명하기 전에 질문의 의도와 현재 수준을 읽습니다. 그래서 같은 질문도 지금 필요한 공부의 형태로 달라집니다.</p>
+        <p>바로 정답부터 꺼내지 않아요. 어디에서 막혔는지 먼저 찾고, 지금 알아들을 수 있는 말과 예시로 설명을 이어갑니다.</p>
       </header>
 
       <div className="learning-method__layout">
@@ -62,12 +62,12 @@ export const LearningMethod = () => (
         <div className="answer-blueprint scroll-rise" role="img" aria-label="질문과 답변 수준을 분석해 설명 순서를 설계하는 StudyBox AI 화면">
           <header className="answer-blueprint__chrome">
             <span className="answer-blueprint__brand"><ChatCircleDots weight="duotone" /> StudyBox <strong>AI</strong></span>
-            <span>ANSWER BLUEPRINT</span>
-            <span className="answer-blueprint__status"><i /> READY</span>
+            <span>답변 구성</span>
+            <span className="answer-blueprint__status"><i /> 준비됨</span>
           </header>
 
           <div className="answer-blueprint__question">
-            <span>STUDENT QUESTION</span>
+            <span>학생의 질문</span>
             <p>왜 음수끼리 곱하면 양수가 돼?</p>
           </div>
 
@@ -78,7 +78,7 @@ export const LearningMethod = () => (
           </div>
 
           <div className="answer-blueprint__structure">
-            <span>RESPONSE STRUCTURE</span>
+            <span>설명 순서</span>
             <ol>
               <li>
                 <b>01</b>
