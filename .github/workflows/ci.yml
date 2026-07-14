@@ -15,7 +15,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -38,72 +37,17 @@ jobs:
       - run: npm test
       - run: npm run build
 
-  push-images:
-    needs: verify
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Lowercase repository name
-        id: repo
-        run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Determine push and tags
-        id: meta
-        run: |
-          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            SHORT_SHA=$(echo '${{ github.sha }}' | cut -c1-7)
-            echo "push=true" >> "$GITHUB_OUTPUT"
-            echo "tags=ghcr.io/${{ steps.repo.outputs.name }}/api:main,ghcr.io/${{ steps.repo.outputs.name }}/api:${SHORT_SHA},ghcr.io/${{ steps.repo.outputs.name }}/api:latest" >> "$GITHUB_OUTPUT"
-            echo "tags_web=ghcr.io/${{ steps.repo.outputs.name }}/web:main,ghcr.io/${{ steps.repo.outputs.name }}/web:${SHORT_SHA},ghcr.io/${{ steps.repo.outputs.name }}/web:latest" >> "$GITHUB_OUTPUT"
-          else
-            echo "push=false" >> "$GITHUB_OUTPUT"
-            echo "tags=ghcr.io/${{ steps.repo.outputs.name }}/api:pr-check" >> "$GITHUB_OUTPUT"
-            echo "tags_web=ghcr.io/${{ steps.repo.outputs.name }}/web:pr-check" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/api/Dockerfile
-          push: ${{ steps.meta.outputs.push }}
-          tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/web/Dockerfile
-          push: ${{ steps.meta.outputs.push }}
-          tags: ${{ steps.meta.outputs.tags_web }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   migrate:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: studybox
-          POSTGRES_USER: studybox
-          POSTGRES_PASSWORD: ci-test-password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - run: sudo systemctl start postgresql.service
+      - run: sudo -u postgres psql --command="CREATE USER studybox WITH PASSWORD 'ci-test-password';"
+      - run: sudo -u postgres psql --command="CREATE DATABASE studybox OWNER studybox;"
       - run: npm ci
       - run: npm run build --workspace=@studybox/shared
       - run: npm run build --workspace=@studybox/api

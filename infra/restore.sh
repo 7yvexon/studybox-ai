@@ -2,4 +2,5 @@
 set -eu
 
 backup_file=${1:?Backup file path is required}
-gzip -dc "$backup_file" | docker compose exec -T database psql -U "${POSTGRES_USER:-studybox}" "${POSTGRES_DB:-studybox}"
+: "${DATABASE_URL:?DATABASE_URL is required}"
+gzip -dc "$backup_file" | psql --dbname="$DATABASE_URL" --set=ON_ERROR_STOP=1

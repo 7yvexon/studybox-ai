@@ -3,8 +3,8 @@ name: Deploy
 on:
   workflow_dispatch:
     inputs:
-      image_tag:
-        description: "Image tag to deploy (commit SHA, e.g. abcd123)"
+      commit_sha:
+        description: "Commit SHA to deploy"
         required: true
         type: string
 
@@ -16,24 +16,31 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     env:
-      IMAGE_TAG: ${{ inputs.image_tag }}
+      COMMIT_SHA: ${{ inputs.commit_sha }}
     steps:
+      - name: Validate commit SHA
+        run: |
+          if [[ ! "$COMMIT_SHA" =~ ^[0-9a-f]{7,40}$ ]]; then
+            echo "::error::commit_sha must be a 7 to 40 character lowercase hexadecimal SHA."
+            exit 1
+          fi
       - name: Verify CI passed on target commit
         run: |
-          COMMIT_SHA="${{ github.sha }}"
-          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/commits/${COMMIT_SHA}/check-runs")
-          PUSH_COUNT=$(echo "$RESPONSE" | jq '[.check_runs[] | select(.name | test("push-images"))] | length')
-          if [ "$PUSH_COUNT" = "0" ]; then
-            echo "::error::No CI push-images check runs found for commit ${COMMIT_SHA}. Run CI first."
+          RESPONSE=$(curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA/check-runs?per_page=100")
+          REQUIRED_COUNT=$(echo "$RESPONSE" | jq '[.check_runs[] | select(.name | test("^verify|^migrate"))] | length')
+          FAILED_COUNT=$(echo "$RESPONSE" | jq '[.check_runs[] | select(.name | test("^verify|^migrate")) | select(.conclusion != "success")] | length')
+          if [ "$REQUIRED_COUNT" -lt 3 ] || [ "$FAILED_COUNT" != "0" ]; then
+            echo "::error::The target commit must have successful verify and migrate CI jobs."
             exit 1
           fi
-          FAILED_COUNT=$(echo "$RESPONSE" | jq '[.check_runs[] | select(.name | test("push-images")) | select(.conclusion != "success")] | length')
-          if [ "$FAILED_COUNT" != "0" ]; then
-            echo "::error::CI push-images has ${FAILED_COUNT} unsuccessful check run(s) for commit ${COMMIT_SHA}. Fix CI before deploying."
-            exit 1
-          fi
-          echo "All CI push-images check runs passed for ${COMMIT_SHA}"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+      - name: Create release archive
+        run: git archive --format=tar.gz --prefix=studybox/ --output="studybox-$COMMIT_SHA.tar.gz" HEAD
       - run: mkdir -p ~/.ssh
       - run: printf '%s' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
         env:
@@ -42,11 +49,12 @@ jobs:
       - run: ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-      - name: Pull and deploy images
+      - name: Transfer and activate release
         run: |
-          ssh "$DEPLOY_USER@$DEPLOY_HOST" "cd '$DEPLOY_PATH' && \
-            IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f docker-compose.production.yml pull && \
-            IMAGE_TAG='$IMAGE_TAG' docker compose -f docker-compose.yml -f docker-compose.production.yml up -d"
+          RELEASE_PATH="$DEPLOY_PATH/releases/$COMMIT_SHA"
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" "test ! -e '$RELEASE_PATH' && mkdir -p '$RELEASE_PATH'"
+          scp "studybox-$COMMIT_SHA.tar.gz" "$DEPLOY_USER@$DEPLOY_HOST:/tmp/studybox-$COMMIT_SHA.tar.gz"
+          ssh "$DEPLOY_USER@$DEPLOY_HOST" "tar -xzf '/tmp/studybox-$COMMIT_SHA.tar.gz' --strip-components=1 -C '$RELEASE_PATH' && rm '/tmp/studybox-$COMMIT_SHA.tar.gz' && sudo /bin/sh '$RELEASE_PATH/infra/deploy/release.sh' '$RELEASE_PATH'"
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}

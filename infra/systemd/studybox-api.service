@@ -1,0 +1,22 @@
+[Unit]
+Description=StudyBox AI API
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=studybox
+Group=studybox
+WorkingDirectory=/srv/studybox-ai/current
+EnvironmentFile=/etc/studybox-ai/api.env
+ExecStart=/usr/bin/node apps/api/dist/server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/srv/studybox-ai
+
+[Install]
+WantedBy=multi-user.target

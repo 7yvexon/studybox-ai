@@ -1,6 +1,6 @@
 # StudyBox AI
 
-StudyBox AI는 질문의 맥락, 학생의 답변 수준, 학습 목적에 맞춰 설명 방식을 바꾸는 학습 서비스 MVP입니다. 공개 소개 화면부터 가입·로그인, 대화 기록이 남는 학습 작업 공간까지 하나의 저장소에서 실행할 수 있습니다. 기본 AI 제공자는 `mock`이므로 API 키나 로컬 데이터베이스 없이도 전체 사용자 흐름을 검증할 수 있습니다.
+StudyBox AI는 질문의 맥락, 학생의 답변 수준, 학습 목적에 맞춰 설명 방식을 바꾸는 학습 서비스 MVP입니다. 공개 소개 화면, 가입·로그인, 대화 기록이 남는 학습 작업 공간을 하나의 저장소에서 제공합니다. 기본 AI 제공자는 `mock`이므로 API 키나 로컬 데이터베이스 없이도 사용자 흐름을 검증할 수 있습니다.
 
 ## 구성
 
@@ -11,53 +11,38 @@ apps/
 packages/
 └─ shared/              공통 학습 설정·대화 타입
 infra/
-├─ nginx/               HTTP 및 TLS Nginx 설정
+├─ deploy/              릴리스 활성화 스크립트
+├─ nginx/               네이티브 Nginx 설정 예시
+├─ systemd/             API 서비스 유닛
 ├─ backup.sh            PostgreSQL 백업
 └─ restore.sh           PostgreSQL 복구
-docker-compose.yml      API, 웹, PostgreSQL 운영 구성
 ```
 
 ## 제공 기능
 
-- 아이디·비밀번호 가입과 로그인, 본명·학교명·학년·반·번호 프로필 수집, 로그아웃, 계정 삭제
-- 초대 코드 없는 베타 가입
+- 아이디·비밀번호 가입과 로그인, 학생 프로필 수집, 로그아웃, 계정 삭제
 - 사용자별 대화 생성·조회·제목 수정·삭제와 선택 가능한 메모리/영구 저장
-- 다섯 학습 모드, 여섯 학년별 답변 수준, 세 답변 길이 설정
-- 계정당 기본 일 50회 AI 답변 제한과 단기 요청 제한
-- Argon2id 비밀번호 해시, 만료 DB 세션, `HttpOnly`·`Secure`·`SameSite` 쿠키
-- 모의 AI와 OpenAI 호환 AI 엔드포인트를 교체할 수 있는 `ChatProvider` 인터페이스
-- 상태 점검, 구조화 로그, Docker Compose, Nginx, CI 및 수동 배포 워크플로
-
-파일 업로드, 사진 분석, 소셜 로그인, 관리자 웹 UI는 첫 MVP 범위에 포함하지 않습니다.
-
-## 화면과 사용자 흐름
-
-1. 공개 홈에서 StudyBox AI의 학습 방식과 실제 답변 화면을 확인합니다.
-2. 답변 모드, 중학교 1학년부터 고등학교 3학년까지의 답변 수준, 답변 길이를 선택합니다.
-3. 가입 또는 로그인 후 별도의 학습 작업 공간에서 질문을 시작합니다.
-4. 대화 기록과 설정을 유지한 채 같은 주제를 이어서 공부합니다.
-
-공개 화면은 화이트·블랙·블루 색상과 실제 제품 UI 미리보기를 중심으로 구성했습니다. 과한 3D 효과 없이 가벼운 스크롤 진입 모션만 사용하며, `prefers-reduced-motion` 환경에서는 콘텐츠가 즉시 표시됩니다. 320px 모바일부터 넓은 데스크톱까지 주요 프레임과 입력창이 잘리지 않도록 반응형 비율을 분리했습니다.
+- 다섯 학습 모드, 학년별 답변 수준, 답변 길이 설정
+- 계정별 AI 답변 제한, Argon2id 비밀번호 해시, 만료 DB 세션
+- 모의 AI와 OpenAI 호환 AI 엔드포인트를 교체할 수 있는 `ChatProvider`
+- 상태 점검, 구조화 로그, Nginx, systemd, CI 및 수동 배포 워크플로
 
 ## 빠른 시작
 
-빠른 로컬 체험에는 Node.js 20.18 이상만 필요합니다. 이 모드의 계정과 대화는 API 서버를 재시작하면 초기화됩니다.
+Node.js 20.18 이상이 필요합니다. 빠른 로컬 체험은 기본적으로 메모리 저장소를 사용하므로 서버를 다시 시작하면 계정과 대화가 초기화됩니다.
 
-1. 의존성을 설치합니다.
+```powershell
+npm ci
+npm run dev
+```
 
-   ```powershell
-   npm ci
-   ```
+웹은 `http://localhost:5173`, API는 `http://127.0.0.1:3001`에서 실행됩니다.
 
-2. 개발 서버를 시작하고 `http://localhost:5173`을 엽니다. 개발 환경의 기본 `STORAGE_MODE`는 `memory`입니다.
+PostgreSQL을 사용하려면 `.env.example`을 `.env`로 복사하고 `STORAGE_MODE=postgres`, `DATABASE_URL`을 설정한 뒤 다음 명령을 실행합니다.
 
-   ```powershell
-   npm run dev
-   ```
-
-   기본 포트는 웹 `5173`, API `3001`입니다. 포트가 이미 사용 중이면 실행 스크립트가 사용 가능한 포트를 안내합니다.
-
-PostgreSQL로 영구 저장하려면 `.env.example`을 `.env`로 복사하고 `STORAGE_MODE=postgres`를 설정한 뒤 Docker 데이터베이스와 마이그레이션을 실행하세요.
+```powershell
+npm run db:migrate
+```
 
 ## 검사 명령
 
@@ -67,67 +52,102 @@ npm test
 npm run build
 ```
 
-검사에는 공통 설정 검증과 모의 AI 응답 형식 검증이 포함됩니다. 실제 PostgreSQL·SMTP·브라우저 통합 흐름은 배포 후보 환경에서 수동으로도 확인해야 합니다.
+## Ubuntu VPS 운영 배포
 
-## 운영 배포
+운영 서버는 Docker 없이 Node.js, PostgreSQL, Nginx, systemd를 직접 사용합니다. API는 루프백 주소에서만 수신하고 Nginx가 정적 웹과 `/api` 요청을 같은 도메인으로 제공합니다.
 
-이 프로젝트는 GitHub Container Registry(ghcr.io)를 통해 미리 빌드된 Docker 이미지를 배포합니다. CI가 `main` 브랜치에 push할 때마다 `ghcr.io/7yvexon/studybox-ai/api`와 `ghcr.io/7yvexon/studybox-ai/web` 이미지를 `:main`, `:<commit-sha>`, `:latest` 태그로 게시합니다.
+### 서버 초기 설정
 
-### 서버 준비
-
-1. Ubuntu VPS에 Docker Compose와 TLS 인증서를 준비합니다. Git이나 Node.js는 불필요합니다.
-2. 서버에 Compose 파일과 `.env`를 배치합니다.
-   - `docker-compose.yml`, `docker-compose.production.yml`, `infra/nginx/tls.conf`(도메인에 맞게 수정), `.env`
-   - `.env.example`을 복사한 `.env`에 운영 도메인, 긴 DB 비밀번호, 관리자 아이디 목록을 입력합니다. `ADMIN_USER_IDS`에 쉼표로 구분한 아이디를 등록하고, `ADMIN_REGISTRATION_TOKEN`에 관리자 등록용 긴 무작위 토큰을 설정합니다. 해당 아이디로 가입할 때 이 토큰을 함께 제출해야만 관리자 역할이 부여됩니다. `.env`는 저장소에 커밋하지 않습니다.
-3. GHCR 이미지가 private인 경우 서버에서 GitHub 인증이 필요합니다. `read:packages` 권한이 있는 Personal Access Token으로 로그인합니다.
-
-   ```bash
-   echo "$GITHUB_TOKEN" | docker login ghcr.io -u 7yvexon --password-stdin
-   ```
-
-### 첫 배포 (HTTP)
+Ubuntu 24.04 LTS 서버에 Node.js 22, npm, PostgreSQL 16, Nginx, Certbot, curl을 설치합니다. 방화벽은 SSH·HTTP·HTTPS만 열고 API 포트 `3001`은 열지 않습니다.
 
 ```bash
-IMAGE_TAG=latest docker compose up -d
+sudo adduser --system --group --home /srv/studybox-ai studybox
+sudo adduser deployer
+sudo install -d -o deployer -g deployer /srv/studybox-ai/releases
+sudo install -d -o studybox -g studybox /srv/studybox-backups
+sudo install -d -m 750 -o root -g studybox /etc/studybox-ai
+sudo install -d -m 755 /var/www/certbot
+sudo chmod 755 /srv/studybox-ai
 ```
 
-### HTTPS 적용
-
-도메인 인증서를 발급한 뒤 `infra/nginx/tls.conf.example`을 `infra/nginx/tls.conf`로 복사해 실제 도메인으로 바꿉니다.
+PostgreSQL에는 `studybox` 전용 사용자와 데이터베이스를 생성합니다. 비밀번호와 도메인을 실제 값으로 바꿉니다.
 
 ```bash
-IMAGE_TAG=latest docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+sudo -u postgres createuser --pwprompt studybox
+sudo -u postgres createdb --owner=studybox studybox
 ```
 
-### 배포 (GitHub Actions Deploy 워크플로)
+`.env.example`을 바탕으로 `/etc/studybox-ai/api.env`를 만들고, `DATABASE_URL`, `APP_ORIGIN`, `ADMIN_REGISTRATION_TOKEN`, AI 키를 설정합니다. 이 파일은 저장소에 넣지 않습니다.
 
-CI가 `push-images` 잡을 통과한 커밋의 SHA를 `image_tag` 입력으로 지정해 수동 실행합니다. 서버에서 이미지를 pull하고 교체합니다.
+```bash
+sudo install -m 640 -o root -g studybox /dev/null /etc/studybox-ai/api.env
+sudoedit /etc/studybox-ai/api.env
+```
 
-이전 커밋의 SHA를 입력하면 즉시 롤백됩니다.
+저장소의 systemd·Nginx 템플릿을 VPS의 `/tmp`로 먼저 전송합니다. 이후 systemd 유닛을 설치하고 API 서비스와 백업 타이머를 활성화합니다. 첫 릴리스 전에는 `current` 디렉터리가 없으므로 API 서비스 시작은 첫 배포 이후에 수행합니다.
 
-PostgreSQL은 Compose 내부 네트워크에만 있고 호스트 포트를 열지 않습니다. `/api/health`는 프로세스 상태, `/api/ready`는 DB 연결 상태를 반환합니다.
+```bash
+scp infra/systemd/studybox-api.service infra/systemd/studybox-backup.service infra/systemd/studybox-backup.timer infra/nginx/studybox.conf.example deployer@studybox.example.com:/tmp/
+sudo cp /tmp/studybox-api.service /tmp/studybox-backup.service /tmp/studybox-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable studybox-api.service
+sudo systemctl enable --now studybox-backup.timer
+```
 
-현재 인증 모델 전환 마이그레이션(`002_switch_to_username_auth.sql`)은 기존 이메일 계정 데이터를 새 학생 프로필 모델로 옮기지 않고 초기화합니다. 이미 사용자 데이터가 있는 운영 DB에는 그대로 적용하지 말고, 먼저 백업한 뒤 별도의 데이터 변환 마이그레이션을 준비하세요. 데이터가 없는 신규 배포에서는 Compose 시작 시 마이그레이션이 자동으로 실행됩니다.
+`/tmp/studybox.conf.example`을 `/etc/nginx/sites-available/studybox.conf`로 복사해 도메인을 바꾸고 심볼릭 링크를 만듭니다. HTTP 설정을 적용한 뒤 인증서를 발급하고 Nginx를 다시 불러옵니다.
 
-GitHub Actions의 `CI`는 타입 검사·테스트·빌드·마이그레이션 검증·Docker 이미지 빌드 및 ghcr.io 게시를 수행합니다. `Deploy` 워크플로는 수동 실행만 가능하며 `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`, `DEPLOY_SSH_KEY` 환경 시크릿이 준비된 GitHub `production` 환경에서 실행합니다.
+```bash
+sudo cp /tmp/studybox.conf.example /etc/nginx/sites-available/studybox.conf
+sudoedit /etc/nginx/sites-available/studybox.conf
+sudo ln -s /etc/nginx/sites-available/studybox.conf /etc/nginx/sites-enabled/studybox.conf
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot certonly --webroot -w /var/www/certbot -d studybox.example.com
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+GitHub Actions가 SSH로 릴리스를 전송할 사용자에게는 배포 스크립트 실행 권한만 부여합니다. `deployer`와 경로는 실제 배포 계정 및 경로에 맞춰 바꿉니다.
+
+```bash
+echo 'deployer ALL=(root) NOPASSWD: /bin/sh /srv/studybox-ai/releases/*/infra/deploy/release.sh /srv/studybox-ai/releases/*' | sudo tee /etc/sudoers.d/studybox-deploy
+sudo chmod 440 /etc/sudoers.d/studybox-deploy
+sudo visudo -cf /etc/sudoers.d/studybox-deploy
+```
+
+### GitHub Actions 배포
+
+`CI`는 타입 검사·테스트·빌드·PostgreSQL 마이그레이션 검증을 수행합니다. `Deploy`는 성공한 커밋 SHA를 입력받아 해당 소스를 VPS의 `/srv/studybox-ai/releases/<SHA>`로 전송합니다. 서버가 의존성 설치, 빌드, 마이그레이션을 모두 성공하면 `current` 링크를 새 릴리스로 바꾸고 API를 재시작합니다.
+
+GitHub `production` 환경에 다음 시크릿을 등록합니다.
+
+- `DEPLOY_HOST`: VPS 호스트명 또는 IP
+- `DEPLOY_USER`: SSH 배포 사용자
+- `DEPLOY_PATH`: `/srv/studybox-ai`
+- `DEPLOY_SSH_KEY`: 배포 사용자의 개인 SSH 키
+
+GitHub Actions의 **Deploy** 워크플로에서 검증을 통과한 커밋 SHA를 `commit_sha`로 입력해 배포합니다. 이전 SHA를 입력하면 해당 릴리스를 새로 빌드해 롤백할 수 있습니다.
+
+`/api/health`는 API 프로세스 상태를, `/api/ready`는 데이터베이스 연결 상태를 반환합니다.
+
+현재 인증 모델 전환 마이그레이션(`002_switch_to_username_auth.sql`)은 기존 이메일 계정 데이터를 새 학생 프로필 모델로 옮기지 않고 초기화합니다. 기존 운영 데이터베이스에는 적용 전 백업과 별도 데이터 변환 마이그레이션이 필요합니다.
 
 ## 백업과 복구
 
-VPS의 프로젝트 루트에서 매일 다음 명령을 실행하도록 스케줄링합니다.
+설치한 `studybox-backup.timer`가 매일 03:15에 `DATABASE_URL`을 사용해 백업을 만듭니다. 타이머 상태와 실행 결과는 다음 명령으로 확인합니다.
 
 ```bash
-BACKUP_DIR=/srv/studybox-backups sh infra/backup.sh
+systemctl list-timers studybox-backup.timer
+journalctl -u studybox-backup.service
 ```
 
-스크립트는 14일이 지난 로컬 백업을 삭제합니다. 원격 또는 암호화된 백업 저장소로 별도 복제해야 합니다. 복구 전에는 운영 DB를 별도 보존하고 다음 명령을 사용합니다.
+스크립트는 로컬 백업을 14일 보관합니다. 복구 전에는 현재 DB를 별도 백업한 뒤 실행합니다.
 
 ```bash
-sh infra/restore.sh /srv/studybox-backups/studybox-YYYYMMDDTHHMMSSZ.sql.gz
+sudo -u studybox sh -c 'set -a; . /etc/studybox-ai/api.env; set +a; /bin/sh /srv/studybox-ai/current/infra/restore.sh /srv/studybox-backups/studybox-YYYYMMDDTHHMMSSZ.sql.gz'
 ```
 
 ## 실제 AI 제공자 연결
 
-기본값은 `AI_PROVIDER=mock`입니다. 실제 OpenAI 호환 제공자를 연결할 때만 다음 값을 운영 환경변수에 설정합니다.
+기본값은 `AI_PROVIDER=mock`입니다. 실제 OpenAI 호환 제공자를 연결할 때만 운영 환경 파일에 다음 값을 설정합니다.
 
 ```text
 AI_PROVIDER=openai-compatible
@@ -137,26 +157,12 @@ AI_FALLBACK_MODELS=first-fallback-model-id,second-fallback-model-id
 AI_API_KEY=provider-secret
 ```
 
-API 키는 `.env` 또는 배포 플랫폼의 시크릿에만 저장하고, 브라우저 환경변수·React 번들·저장소에는 넣지 않습니다. 제공자가 Chat Completions 호환이 아니면 `apps/api/src/ai`에 `ChatProvider` 구현을 추가합니다.
-
-### OpenRouter 무료 우선 설정
-
-OpenRouter는 OpenAI 호환 Chat Completions API를 제공하므로 별도 어댑터 없이 연결할 수 있습니다. `AI_MODEL`을 첫 번째 모델로 사용하고, `AI_FALLBACK_MODELS`의 모델을 왼쪽부터 순서대로 자동 폴백합니다.
-
-```text
-AI_PROVIDER=openai-compatible
-AI_BASE_URL=https://openrouter.ai/api/v1
-AI_MODEL=qwen/qwen3-next-80b-a3b-instruct:free
-AI_FALLBACK_MODELS=google/gemma-4-31b-it:free,openai/gpt-oss-20b:free,qwen/qwen3.5-flash-02-23,deepseek/deepseek-v3.2
-AI_API_KEY=OpenRouter에서 새로 발급한 키
-```
-
-무료 모델은 먼저 사용하고, 제공자 장애·일시적 거절·한도 초과 시에만 뒤의 모델로 전환됩니다. OpenRouter 요청당 폴백 모델은 최대 3개까지 허용하므로, 추가 모델은 앞선 모델이 모두 실패했을 때 서버가 다음 요청으로 시도합니다. OpenRouter 계정에 누적 $10 이상 결제한 경우 `:free` 모델은 계정 전체 기준으로 하루 최대 1,000회까지 사용할 수 있습니다. 유료 모델 비용을 제한하려면 OpenRouter에서 해당 키의 월 지출 한도를 $5로 설정하세요.
+API 키는 `/etc/studybox-ai/api.env`에만 저장하고 브라우저 번들·저장소·GitHub Actions 로그에는 넣지 않습니다.
 
 ## 배포 전 확인
 
-- HTTPS, `APP_ORIGIN`, 관리자 아이디 목록, 데이터베이스 백업 경로를 실제 값으로 설정한다.
-- 아이디 가입·로그인·대화·삭제·계정 탈퇴를 확인한다.
-- 두 사용자 계정으로 서로의 대화 URL에 접근할 수 없는지 확인한다.
-- 일 50회 한도와 모의 제공자 오류·실제 제공자 시간 초과를 확인한다.
-- 모바일 폭, 키보드 전용 조작, 감소된 모션 설정, 브라우저 콘솔 오류를 확인한다.
+- HTTPS, `APP_ORIGIN`, `HOST=127.0.0.1`, 관리자 설정, DB 백업 경로를 확인한다.
+- 아이디 가입·로그인·대화 생성·삭제·계정 탈퇴를 확인한다.
+- 두 사용자 계정 사이에 대화 URL 접근이 차단되는지 확인한다.
+- API 프로세스 중지 후 systemd 자동 재시작과 `/api/ready` 응답을 확인한다.
+- 백업 파일을 별도 테스트 DB에 복원해 데이터 복구를 확인한다.

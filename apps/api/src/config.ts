@@ -9,6 +9,7 @@ const booleanFromEnvironment = z
 
 const configSchema = z.object({
   nodeEnv: z.enum(["development", "test", "production"]).default("development"),
+  host: z.string().ip().default("127.0.0.1"),
   port: z.coerce.number().int().min(1).max(65535).default(3001),
   storageMode: z.enum(["memory", "postgres"]).optional(),
   databaseUrl: z.string().min(1).default("postgresql://studybox:studybox@localhost:5432/studybox"),
@@ -36,6 +37,7 @@ const configSchema = z.object({
 
 const parsed = configSchema.parse({
   nodeEnv: process.env.NODE_ENV,
+  host: process.env.HOST,
   port: process.env.PORT,
   storageMode: process.env.STORAGE_MODE,
   databaseUrl: process.env.DATABASE_URL,
