@@ -118,6 +118,25 @@ const BrandLogo = () => (
 
 const SiteHeader = ({ tone = "dark", minimal = false }: { tone?: "dark" | "light"; minimal?: boolean }) => {
   const { user, loading } = useAuth();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const [openingRecentConversation, setOpeningRecentConversation] = useState(false);
+  const showRecentConversation = Boolean(user && pathname === "/");
+
+  const openRecentConversation = async () => {
+    if (openingRecentConversation) {
+      return;
+    }
+
+    setOpeningRecentConversation(true);
+
+    try {
+      const { conversations } = await api.listConversations();
+      navigate(conversations[0] ? `/app/${conversations[0].id}` : "/app/new");
+    } catch {
+      navigate("/app/new");
+    }
+  };
 
   return (
     <header className={`site-header site-header--${tone}${minimal ? " site-header--minimal" : ""}`}>
@@ -133,9 +152,22 @@ const SiteHeader = ({ tone = "dark", minimal = false }: { tone?: "dark" | "light
           </nav>
         )}
         {!loading && (
-          <Link className="header-start" to={user ? "/app/new" : "/login?next=/app/new"}>
-            {user ? "학습 시작" : "로그인"}
-          </Link>
+          <div className="site-header__actions">
+            {showRecentConversation && (
+              <button
+                className="header-recent"
+                type="button"
+                onClick={openRecentConversation}
+                disabled={openingRecentConversation}
+                aria-busy={openingRecentConversation}
+              >
+                {openingRecentConversation ? "불러오는 중…" : "최근 대화"}
+              </button>
+            )}
+            <Link className="header-start" to={user ? "/app/new" : "/login?next=/app/new"}>
+              {user ? "학습 시작" : "로그인"}
+            </Link>
+          </div>
         )}
       </div>
     </header>

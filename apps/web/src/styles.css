@@ -44,6 +44,40 @@ body.agent-home-page {
   background: #1687f8;
 }
 
+.site-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.header-recent {
+  min-height: 34px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.header-recent:hover {
+  color: var(--color-primary);
+}
+
+.header-recent:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.header-recent:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
 .agent-home {
   display: grid;
   min-height: 100svh;
@@ -928,6 +962,15 @@ body.chat-page {
   .agent-home-page .header-start {
     min-width: 72px;
     min-height: 36px;
+  }
+
+  .site-header__actions {
+    gap: 8px;
+  }
+
+  .header-recent {
+    min-height: 30px;
+    font-size: 0.7rem;
   }
 
   .agent-home {

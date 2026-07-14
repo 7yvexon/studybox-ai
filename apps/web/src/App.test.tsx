@@ -37,6 +37,12 @@ const conversation = {
   lastMessagePreview: null
 };
 
+const newConversation = {
+  ...conversation,
+  id: "conversation-new",
+  title: "새 학습"
+};
+
 const authenticatedFetch = vi.fn(async (input: RequestInfo | URL) => {
   const url = String(input);
 
@@ -54,6 +60,41 @@ const authenticatedFetch = vi.fn(async (input: RequestInfo | URL) => {
 
   return response(404, { error: { code: "NOT_FOUND", message: "찾을 수 없습니다." } });
 });
+
+const createRecentConversationFetch = ({
+  conversations = [conversation],
+  listStatus = 200
+}: {
+  conversations?: typeof conversation[];
+  listStatus?: number;
+} = {}) =>
+  vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+
+    if (url === "/api/me") {
+      return response(200, { user: currentUser });
+    }
+
+    if (url === "/api/conversations" && init?.method === "POST") {
+      return response(201, { conversation: newConversation });
+    }
+
+    if (url === "/api/conversations") {
+      return listStatus === 200
+        ? response(200, { conversations })
+        : response(listStatus, { error: { code: "REQUEST_FAILED", message: "요청에 실패했습니다." } });
+    }
+
+    if (url === `/api/conversations/${conversation.id}`) {
+      return response(200, { conversation, messages: [] });
+    }
+
+    if (url === `/api/conversations/${newConversation.id}`) {
+      return response(200, { conversation: newConversation, messages: [] });
+    }
+
+    return response(404, { error: { code: "NOT_FOUND", message: "찾을 수 없습니다." } });
+  });
 
 const renderAt = (path: string) =>
   render(
@@ -119,6 +160,65 @@ describe("StudyBox web experience", () => {
     expect(document.querySelectorAll(".learning-method__steps li")).toHaveLength(4);
     expect(document.querySelector(".deep-home__visual")).toBeNull();
     expect(document.querySelector(".kinetic-story__photo")).toBeNull();
+  });
+
+  it("opens the most recently updated conversation from the signed-in home header", async () => {
+    let resolveConversationList: (value: Response) => void;
+    const conversationList = new Promise<Response>((resolve) => {
+      resolveConversationList = resolve;
+    });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url === "/api/me") {
+        return response(200, { user: currentUser });
+      }
+
+      if (url === "/api/conversations") {
+        return conversationList;
+      }
+
+      if (url === `/api/conversations/${conversation.id}`) {
+        return response(200, { conversation, messages: [] });
+      }
+
+      return response(404, { error: { code: "NOT_FOUND", message: "찾을 수 없습니다." } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderAt("/");
+
+    const recentConversation = await screen.findByRole("button", { name: "최근 대화" }) as HTMLButtonElement;
+    fireEvent.click(recentConversation);
+
+    expect(recentConversation.disabled).toBe(true);
+    expect(recentConversation.getAttribute("aria-busy")).toBe("true");
+    expect(recentConversation.textContent).toBe("불러오는 중…");
+
+    resolveConversationList!(response(200, { conversations: [conversation] }));
+
+    expect(await screen.findByRole("button", { name: "작업 공간 메뉴 열기" })).toBeTruthy();
+  });
+
+  it("starts a new conversation when the signed-in user has no previous conversations", async () => {
+    const fetchMock = createRecentConversationFetch({ conversations: [] });
+    vi.stubGlobal("fetch", fetchMock);
+    renderAt("/");
+
+    fireEvent.click(await screen.findByRole("button", { name: "최근 대화" }));
+
+    expect(await screen.findByRole("button", { name: "작업 공간 메뉴 열기" })).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url, init]) => url === "/api/conversations" && init?.method === "POST")).toBe(true);
+  });
+
+  it("starts a new conversation when recent-conversation lookup fails", async () => {
+    const fetchMock = createRecentConversationFetch({ listStatus: 500 });
+    vi.stubGlobal("fetch", fetchMock);
+    renderAt("/");
+
+    fireEvent.click(await screen.findByRole("button", { name: "최근 대화" }));
+
+    expect(await screen.findByRole("button", { name: "작업 공간 메뉴 열기" })).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url, init]) => url === "/api/conversations" && init?.method === "POST")).toBe(true);
   });
 
   it("keeps login input behavior and validation attributes", async () => {
