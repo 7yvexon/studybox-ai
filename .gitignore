@@ -17,3 +17,5 @@ scripts/start-dev.ps1
 scripts/watch-dev.ps1
 infra/nginx/tls.conf
 .zcode/
+_activate_codex.ps1
+_send_prompt.ps1

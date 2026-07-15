@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StudyBox AI 발표 자료</title>
+  <style>
+    :root {
+      --ink: #14213d;
+      --muted: #64748b;
+      --blue: #3158e6;
+      --blue-dark: #172a78;
+      --blue-soft: #edf2ff;
+      --line: #dbe4f1;
+      --card: #ffffff;
+      --mint: #45c7ae;
+      --orange: #ffad54;
+      --shadow: 0 18px 50px rgba(28, 49, 111, .12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      margin: 0;
+      overflow: hidden;
+      color: var(--ink);
+      background: #dce6ff;
+      font-family: Pretendard, "Noto Sans KR", "Malgun Gothic", sans-serif;
+    }
+
+    button { font: inherit; }
+
+    .presentation {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      min-height: 560px;
+      background: #fbfcff;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: clamp(28px, 4.5vw, 70px) clamp(28px, 7vw, 120px) clamp(26px, 3.5vw, 52px);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(30px);
+      transition: opacity .35s ease, transform .35s ease;
+    }
+
+    .slide.is-active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(0);
+    }
+
+    .slide__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: clamp(15px, 1.4vw, 22px);
+      font-weight: 800;
+      letter-spacing: -.03em;
+    }
+
+    .brand__mark {
+      display: grid;
+      width: 28px;
+      height: 28px;
+      place-items: center;
+      border-radius: 9px;
+      color: white;
+      background: var(--blue);
+      box-shadow: 0 8px 18px rgba(49, 88, 230, .3);
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--blue);
+      font-size: clamp(12px, 1vw, 16px);
+      font-weight: 800;
+      letter-spacing: .12em;
+    }
+
+    .slide__number {
+      color: #91a0bd;
+      font-size: clamp(13px, 1vw, 16px);
+      font-weight: 700;
+    }
+
+    .slide__body {
+      align-self: center;
+      width: min(100%, 1240px);
+      margin: 0 auto;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      max-width: 900px;
+      margin-bottom: 24px;
+      font-size: clamp(46px, 6vw, 92px);
+      line-height: 1.12;
+      letter-spacing: -.065em;
+    }
+
+    h2 {
+      max-width: 920px;
+      margin-bottom: clamp(22px, 3vw, 42px);
+      font-size: clamp(34px, 4vw, 64px);
+      line-height: 1.2;
+      letter-spacing: -.06em;
+    }
+
+    h2 strong, .accent { color: var(--blue); }
+
+    .lead {
+      max-width: 780px;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: clamp(18px, 1.6vw, 27px);
+      line-height: 1.65;
+      letter-spacing: -.03em;
+    }
+
+    .slide__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      color: var(--muted);
+      font-size: clamp(12px, .9vw, 15px);
+    }
+
+    .progress {
+      display: flex;
+      gap: 6px;
+    }
+
+    .progress span {
+      width: 20px;
+      height: 4px;
+      border-radius: 99px;
+      background: #dce3f0;
+    }
+
+    .progress span.is-active { background: var(--blue); }
+
+    .hero {
+      overflow: hidden;
+      color: white;
+      background: radial-gradient(circle at 84% 20%, #657df4 0, transparent 25%), linear-gradient(135deg, #101d53, #3158e6 60%, #7590ff);
+    }
+
+    .hero::after {
+      position: absolute;
+      right: -8vw;
+      bottom: -18vw;
+      width: 48vw;
+      height: 48vw;
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 50%;
+      content: "";
+      box-shadow: 0 0 0 4vw rgba(255,255,255,.05), 0 0 0 9vw rgba(255,255,255,.04);
+    }
+
+    .hero .brand__mark { color: var(--blue); background: white; }
+    .hero .eyebrow, .hero .slide__number { color: #cbd6ff; }
+    .hero .lead, .hero .slide__footer { color: #dce4ff; }
+    .hero h1 { position: relative; z-index: 1; }
+    .hero__tag {
+      display: inline-block;
+      margin-bottom: 20px;
+      padding: 8px 14px;
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 999px;
+      color: #eaf0ff;
+      font-size: clamp(13px, 1.1vw, 17px);
+      font-weight: 700;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(14px, 2vw, 28px);
+    }
+
+    .card {
+      min-height: 220px;
+      padding: clamp(22px, 2.2vw, 36px);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .card__icon {
+      display: grid;
+      width: 48px;
+      height: 48px;
+      place-items: center;
+      margin-bottom: 24px;
+      border-radius: 15px;
+      color: var(--blue);
+      background: var(--blue-soft);
+      font-size: 25px;
+    }
+
+    .card h3 {
+      margin-bottom: 12px;
+      font-size: clamp(19px, 1.65vw, 27px);
+      letter-spacing: -.045em;
+    }
+
+    .card p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: clamp(14px, 1.15vw, 18px);
+      line-height: 1.65;
+      letter-spacing: -.025em;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+
+    .mode {
+      min-height: 172px;
+      padding: 24px 18px;
+      border-radius: 20px;
+      color: white;
+      background: var(--blue);
+    }
+
+    .mode:nth-child(2) { background: #526ddf; }
+    .mode:nth-child(3) { background: #6984ee; }
+    .mode:nth-child(4) { background: #3a96be; }
+    .mode:nth-child(5) { background: #46a99d; }
+    .mode span { display: block; margin-bottom: 26px; opacity: .75; font-size: 16px; font-weight: 800; }
+    .mode strong { display: block; font-size: clamp(18px, 1.7vw, 26px); letter-spacing: -.05em; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      align-items: center;
+      gap: 12px;
+    }
+
+    .flow__item {
+      position: relative;
+      min-height: 138px;
+      padding: 22px 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: white;
+      box-shadow: 0 10px 28px rgba(34, 59, 135, .08);
+    }
+
+    .flow__item:not(:last-child)::after {
+      position: absolute;
+      top: 50%;
+      right: -11px;
+      z-index: 2;
+      width: 16px;
+      height: 16px;
+      border-top: 2px solid var(--blue);
+      border-right: 2px solid var(--blue);
+      content: "";
+      transform: translateY(-50%) rotate(45deg);
+    }
+
+    .flow__number { display: block; margin-bottom: 13px; color: var(--blue); font-size: 13px; font-weight: 800; }
+    .flow__item strong { display: block; font-size: clamp(16px, 1.35vw, 21px); letter-spacing: -.04em; }
+    .flow__item small { display: block; margin-top: 8px; color: var(--muted); font-size: clamp(11px, .85vw, 14px); line-height: 1.4; }
+
+    .api-card {
+      display: grid;
+      grid-template-columns: 1.08fr .92fr;
+      overflow: hidden;
+      border-radius: 28px;
+      background: var(--ink);
+      box-shadow: var(--shadow);
+    }
+
+    .api-card__main { padding: clamp(28px, 3.6vw, 60px); color: white; }
+    .api-card__main h3 { margin-bottom: 18px; font-size: clamp(24px, 2.5vw, 40px); letter-spacing: -.055em; }
+    .api-card__main p { color: #cad5ff; font-size: clamp(15px, 1.2vw, 19px); line-height: 1.65; }
+    .endpoint {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      color: #aee8ff;
+      background: #0b1537;
+      font-family: Consolas, monospace;
+      font-size: clamp(13px, 1.1vw, 17px);
+    }
+
+    .api-card__side {
+      display: grid;
+      align-content: center;
+      gap: 14px;
+      padding: clamp(25px, 3vw, 48px);
+      background: linear-gradient(160deg, #e7edff, #cbd8ff);
+    }
+
+    .pill {
+      padding: 13px 16px;
+      border-radius: 12px;
+      color: var(--blue-dark);
+      background: rgba(255,255,255,.78);
+      font-size: clamp(13px, 1.05vw, 17px);
+      font-weight: 700;
+    }
+
+    .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(22px, 4vw, 70px); align-items: start; }
+
+    .list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+    .list li { position: relative; padding: 17px 18px 17px 48px; border-radius: 14px; background: var(--blue-soft); font-size: clamp(15px, 1.25vw, 20px); font-weight: 700; letter-spacing: -.035em; }
+    .list li::before { position: absolute; left: 18px; color: var(--blue); content: "✓"; }
+
+    .security-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .security { min-height: 140px; padding: 22px; border-radius: 18px; background: white; border: 1px solid var(--line); }
+    .security span { display: block; margin-bottom: 12px; font-size: 24px; }
+    .security strong { display: block; margin-bottom: 8px; font-size: clamp(16px, 1.3vw, 21px); letter-spacing: -.04em; }
+    .security p { margin: 0; color: var(--muted); font-size: clamp(12px, 1vw, 16px); line-height: 1.5; }
+
+    .summary { color: white; background: linear-gradient(130deg, #172a78, #3158e6); }
+    .summary .slide__number, .summary .eyebrow { color: #c9d5ff; }
+    .summary .slide__footer { color: #dce4ff; }
+    .summary h2 { max-width: 1050px; }
+    .summary .cards { grid-template-columns: repeat(4, 1fr); }
+    .summary .card { min-height: 180px; color: var(--ink); box-shadow: none; }
+
+    .controls {
+      position: fixed;
+      right: 26px;
+      bottom: 22px;
+      z-index: 10;
+      display: flex;
+      gap: 8px;
+    }
+
+    .controls button {
+      width: 43px;
+      height: 43px;
+      border: 1px solid rgba(20,33,61,.13);
+      border-radius: 50%;
+      color: var(--ink);
+      background: rgba(255,255,255,.9);
+      cursor: pointer;
+      font-size: 20px;
+      box-shadow: 0 5px 18px rgba(20,33,61,.12);
+    }
+
+    .controls button:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+
+    .hint { position: fixed; right: 28px; top: 22px; z-index: 10; color: #64748b; font-size: 13px; }
+
+    @media (max-width: 800px) {
+      body { overflow: auto; }
+      .presentation { height: auto; min-height: 0; }
+      .slide { position: relative; min-height: 100vh; opacity: 1; transform: none; pointer-events: auto; border-bottom: 8px solid #dce6ff; }
+      .slide:not(.is-active) { display: none; }
+      .cards, .summary .cards { grid-template-columns: 1fr; }
+      .mode-grid, .flow { grid-template-columns: 1fr 1fr; }
+      .flow__item:not(:last-child)::after { display: none; }
+      .api-card, .two-column { grid-template-columns: 1fr; }
+      .hint { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="presentation" aria-label="StudyBox AI 발표 자료">
+    <section class="slide hero is-active" aria-labelledby="slide-1-title">
+      <header class="slide__header">
+        <div class="brand"><span class="brand__mark">S</span>StudyBox AI</div>
+        <span class="slide__number">01 / 08</span>
+      </header>
+      <div class="slide__body">
+        <p class="hero__tag">AI 기반 맞춤형 학습 서비스</p>
+        <h1 id="slide-1-title">질문은 하나,<br>공부는 <span class="accent">내 방식대로.</span></h1>
+        <p class="lead">학습 목적과 학년 수준에 맞춰 답변 구조를 바꾸는 AI 학습 서비스, StudyBox AI</p>
+      </div>
+      <footer class="slide__footer"><span>학교 발표 자료</span><div class="progress" aria-hidden="true"><span class="is-active"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></footer>
+    </section>
+
+    <section class="slide" aria-labelledby="slide-2-title">
+      <header class="slide__header"><p class="eyebrow">01. 문제와 목표</p><span class="slide__number">02 / 08</span></header>
+      <div class="slide__body">
+        <h2 id="slide-2-title">모든 질문에 같은 답변이<br><strong>적합한 것은 아닙니다.</strong></h2>
+        <div class="cards">
+          <article class="card"><div class="card__icon">◎</div><h3>학습 목적의 차이</h3><p>개념 이해, 문제 풀이, 시험 대비, 수행평가는 필요한 답변 방식이 다릅니다.</p></article>
+          <article class="card"><div class="card__icon">↗</div><h3>학생 수준의 차이</h3><p>중학생과 고등학생에게 같은 용어와 깊이의 설명을 제공할 수 없습니다.</p></article>
+          <article class="card"><div class="card__icon">▤</div><h3>기록의 필요성</h3><p>이전 질문을 이어 보고, 자신의 학습 흐름을 관리할 수 있어야 합니다.</p></article>
+        </div>
+      </div>
+      <footer class="slide__footer"><span>“답변”이 아니라 “학습 경험”을 설계했습니다.</span><div class="progress" aria-hidden="true"><span></span><span class="is-active"></span><span></span><span></span><span></span><span></span><span></span><span></span></div></footer>
+    </section>
+
+    <section class="slide" aria-labelledby="slide-3-title">
+      <header class="slide__header"><p class="eyebrow">02. 핵심 기능</p><span class="slide__number">03 / 08</span></header>
+      <div class="slide__body">
+        <h2 id="slide-3-title">사용자가 선택한 설정으로<br><strong>AI 답변을 맞춤 구성합니다.</strong></h2>
+        <div class="mode-grid">
+          <article class="mode"><span>01</span><strong>개념 설명</strong></article>
+          <article class="mode"><span>02</span><strong>문제 풀이</strong></article>
+          <article class="mode"><span>03</span><strong>핵심 요약</strong></article>
+          <article class="mode"><span>04</span><strong>시험 대비</strong></article>
+          <article class="mode"><span>05</span><strong>수행평가</strong></article>
+        </div>
+        <p class="lead" style="margin-top: 28px;">추가로 중학교 1학년부터 고등학교 3학년까지의 수준과 답변 길이도 선택할 수 있습니다.</p>
+      </div>
+      <footer class="slide__footer"><span>회원가입 · 로그인 · 대화 생성 · 기록 관리 · 계정 삭제</span><div class="progress" aria-hidden="true"><span></span><span></span><span class="is-active"></span><span></span><span></span><span></span><span></span><span></span></div></footer>
+    </section>
+
+    <section class="slide" aria-labelledby="slide-4-title">
+      <header class="slide__header"><p class="eyebrow">03. 전체 동작 흐름</p><span class="slide__number">04 / 08</span></header>
+      <div class="slide__body">
+        <h2 id="slide-4-title">질문부터 답변 저장까지,<br><strong>안전하게 연결됩니다.</strong></h2>
+        <div class="flow">
+          <article class="flow__item"><span class="flow__number">STEP 1</span><strong>질문 입력</strong><small>모드 · 학년 · 길이 선택</small></article>
+          <article class="flow__item"><span class="flow__number">STEP 2</span><strong>자체 API 요청</strong><small>브라우저 → 백엔드</small></article>
+          <article class="flow__item"><span class="flow__number">STEP 3</span><strong>인증·한도 확인</strong><small>사용자·요청량 검증</small></article>
+          <article class="flow__item"><span class="flow__number">STEP 4</span><strong>AI 답변 생성</strong><small>프롬프트·대화 맥락 전달</small></article>
+          <article class="flow__item"><span class="flow__number">STEP 5</span><strong>검증·저장·표시</strong><small>구조화한 결과를 화면에 출력</small></article>
+        </div>
+      </div>
+      <footer class="slide__footer"><span>핵심 원칙: 브라우저는 외부 AI API에 직접 연결하지 않습니다.</span><div class="progress" aria-hidden="true"><span></span><span></span><span></span><span class="is-active"></span><span></span><span></span><span></span><span></span></div></footer>
+    </section>
+
+    <section class="slide" aria-labelledby="slide-5-title">
+      <header class="slide__header"><p class="eyebrow">04. 사용한 API</p><span class="slide__number">05 / 08</span></header>
+      <div class="slide__body">
+        <h2 id="slide-5-title">OpenRouter의<br><strong>OpenAI 호환 API</strong>를 사용했습니다.</h2>
+        <div class="api-card">
+          <div class="api-card__main">
+            <h3>AI 답변 생성 API</h3>
+            <p>OpenAI와 같은 형식의 Chat Completions 요청을 보내 AI 모델의 답변을 생성합니다. 현재 기본 모델은 Qwen 모델이며, 실패 시 대체 모델을 순서대로 시도합니다.</p>
+            <span class="endpoint">POST /chat/completions</span>
+          </div>
+          <div class="api-card__side">
+            <div class="pill">AI_PROVIDER: openai-compatible</div>
+            <div class="pill">AI_BASE_URL: openrouter.ai/api/v1</div>
+            <div class="pill">기본 모델: Qwen 3 Next</div>
+            <div class="pill">대체 모델: Gemma · GPT-OSS · DeepSeek 등</div>
+          </div>
+        </div>
+      </div>
+      <footer class="slide__footer"><span>API 키는 브라우저가 아닌 서버 환경의 Secret으로 관리합니다.</span><div class="progress" aria-hidden="true"><span></span><span></span><span></span><span></span><span class="is-active"></span><span></span><span></span><span></span></div></footer>
+    </section>
+
+    <section class="slide" aria-labelledby="slide-6-title">
+      <header class="slide__header"><p class="eyebrow">05. AI 답변 설계</p><span class="slide__number">06 / 08</span></header>
+      <div class="slide__body">
+        <h2 id="slide-6-title">질문만 보내지 않고,<br><strong>학습 맥락까지 전달합니다.</strong></h2>
+        <div class="two-column">
+          <div>
+            <p class="lead" style="margin-bottom: 24px;">서버는 시스템 프롬프트와 이전 대화 내용, 사용자가 선택한 학습 설정을 함께 AI에 전달합니다.</p>
+            <ul class="list">
+              <li>학습 모드별 답변 전략을 지시</li>
+              <li>학년 수준에 맞는 어휘와 깊이 조절</li>
+              <li>이전 대화 맥락을 반영한 후속 질문 처리</li>
+              <li>완성 답안 대필보다 이해와 자기 주도 학습 유도</li>
+            </ul>
+          </div>
+          <div class="card" style="min-height: 0; background: #f2f5ff;">
+            <p class="eyebrow" style="margin-bottom: 18px;">응답 형식</p>
+            <h3 style="font-size: clamp(26px, 2.4vw, 38px);">구조화된 JSON</h3>
+            <p style="margin-bottom: 20px;">AI는 항상 같은 형식으로 답변하도록 요청받습니다. 서버는 받은 데이터를 다시 검증한 뒤 화면에 표시합니다.</p>
+            <div class="pill">title · 답변 제목</div>
+            <div class="pill" style="margin-top: 10px;">summary · 핵심 요약</div>
+            <div class="pill" style="margin-top: 10px;">sections · 단계별 설명</div>
+          </div>
+        </div>
+      </div>
+      <footer class="slide__footer"><span>일관된 형식 덕분에 답변을 더 읽기 쉽게 보여 줄 수 있습니다.</span><div class="progress" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span class="is-active"></span><span></span><span></span></div></footer>
+    </section>
+
+    <section class="slide" aria-labelledby="slide-7-title">
+      <header class="slide__header"><p class="eyebrow">06. 데이터와 보안</p><span class="slide__number">07 / 08</span></header>
+      <div class="slide__body">
+        <h2 id="slide-7-title">기능만큼 중요한 것은<br><strong>안전한 학습 기록 관리입니다.</strong></h2>
+        <div class="security-grid">
+          <article class="security"><span>☁</span><strong>Cloudflare Workers</strong><p>서버리스 환경에서 API를 실행합니다.</p></article>
+          <article class="security"><span>▣</span><strong>Cloudflare D1</strong><p>사용자, 세션, 대화, 메시지 기록을 저장합니다.</p></article>
+          <article class="security"><span>⌁</span><strong>비밀번호 해시</strong><p>PBKDF2와 SHA-256 기반 해시로 비밀번호 원문을 저장하지 않습니다.</p></article>
+          <article class="security"><span>◷</span><strong>요청 제한</strong><p>로그인과 AI 질문 횟수를 제한하고, 일일 AI 사용량도 관리합니다.</p></article>
+        </div>
+      </div>
+      <footer class="slide__footer"><span>HttpOnly 세션 쿠키 · SameSite · 동일 출처 확인 적용</span><div class="progress" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span class="is-active"></span><span></span></div></footer>
+    </section>
+
+    <section class="slide summary" aria-labelledby="slide-8-title">
+      <header class="slide__header"><div class="brand"><span class="brand__mark">S</span>StudyBox AI</div><span class="slide__number">08 / 08</span></header>
+      <div class="slide__body">
+        <p class="eyebrow">07. 마무리</p>
+        <h2 id="slide-8-title">AI를 단순한 답안 생성기가 아니라,<br><strong style="color: #aabaff;">학생의 학습 도우미</strong>로 만들었습니다.</h2>
+        <div class="cards">
+          <article class="card"><div class="card__icon">01</div><h3>맞춤형 학습</h3><p>목적, 수준, 길이에 맞춰 설명을 바꿉니다.</p></article>
+          <article class="card"><div class="card__icon">02</div><h3>안전한 API 구조</h3><p>서버를 거쳐 AI API를 호출해 키를 보호합니다.</p></article>
+          <article class="card"><div class="card__icon">03</div><h3>지속되는 학습</h3><p>대화 기록을 저장해 이어서 공부할 수 있습니다.</p></article>
+          <article class="card"><div class="card__icon">04</div><h3>확장 가능한 설계</h3><p>OpenAI 호환 모델을 유연하게 교체할 수 있습니다.</p></article>
+        </div>
+      </div>
+      <footer class="slide__footer"><span>감사합니다.</span><div class="progress" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="is-active"></span></div></footer>
+    </section>
+  </main>
+
+  <p class="hint" aria-hidden="true">← → 또는 Space로 이동</p>
+  <nav class="controls" aria-label="슬라이드 이동">
+    <button type="button" data-action="previous" aria-label="이전 슬라이드">←</button>
+    <button type="button" data-action="next" aria-label="다음 슬라이드">→</button>
+  </nav>
+
+  <script>
+    "use strict";
+
+    const initPresentation = () => {
+      const slides = Array.from(document.querySelectorAll(".slide"));
+      const previousButton = document.querySelector('[data-action="previous"]');
+      const nextButton = document.querySelector('[data-action="next"]');
+      let activeIndex = 0;
+
+      const showSlide = (index) => {
+        activeIndex = (index + slides.length) % slides.length;
+        slides.forEach((slide, slideIndex) => {
+          const isActive = slideIndex === activeIndex;
+          slide.classList.toggle("is-active", isActive);
+          slide.setAttribute("aria-hidden", String(!isActive));
+        });
+        document.title = `StudyBox AI 발표 자료 (${activeIndex + 1}/${slides.length})`;
+      };
+
+      previousButton?.addEventListener("click", () => showSlide(activeIndex - 1));
+      nextButton?.addEventListener("click", () => showSlide(activeIndex + 1));
+      document.addEventListener("keydown", (event) => {
+        if (["ArrowRight", "ArrowDown", " ", "PageDown"].includes(event.key)) {
+          event.preventDefault();
+          showSlide(activeIndex + 1);
+        }
+        if (["ArrowLeft", "ArrowUp", "PageUp"].includes(event.key)) {
+          event.preventDefault();
+          showSlide(activeIndex - 1);
+        }
+        if (event.key === "Home") {
+          event.preventDefault();
+          showSlide(0);
+        }
+        if (event.key === "End") {
+          event.preventDefault();
+          showSlide(slides.length - 1);
+        }
+      });
+
+      showSlide(0);
+    };
+
+    initPresentation();
+  </script>
+</body>
+</html>
