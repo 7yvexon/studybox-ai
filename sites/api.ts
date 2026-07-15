@@ -1,5 +1,5 @@
 import { defaultLearningSettings, type CurrentUser } from "@studybox/shared";
-import type { ZodType } from "zod";
+import { ZodError, type ZodType } from "zod";
 
 import { config } from "./config";
 import {
@@ -22,10 +22,12 @@ import {
   updateConversationTitle
 } from "./database";
 import { ApiError, errorResponse } from "./errors";
+import { errorDetails, hashIp, recordLogSafely, requestIdFrom } from "./logging";
 import { createChatProvider } from "./provider";
 import { createOpaqueToken, getDummyPasswordHash, hashPassword, hashToken, verifyPassword } from "./security";
 import {
   conversationSchema,
+  clientLogSchema,
   loginSchema,
   messageSchema,
   registerSchema,
@@ -67,6 +69,17 @@ const parseCookies = (request: Request) => {
 };
 
 const sessionToken = (request: Request) => parseCookies(request).get(config.sessionCookieName);
+
+const routeFromUrl = (value: string | undefined, request: Request) => {
+  if (!value) {
+    return undefined;
+  }
+  try {
+    return new URL(value, request.url).pathname;
+  } catch {
+    return undefined;
+  }
+};
 
 const requireUser = async (request: Request): Promise<CurrentUser> => {
   const token = sessionToken(request);
@@ -133,6 +146,29 @@ const handleRequest = async (request: Request, path: string[]) => {
   if (method === "GET" && path.length === 1 && path[0] === "ready") {
     await checkStorageReady();
     return json({ status: "ready", storage: "d1" });
+  }
+
+  if (method === "POST" && path.length === 1 && path[0] === "client-events") {
+    const input = await parseBody(request, clientLogSchema);
+    const ipHash = await hashIp(request);
+    await consumeRateLimit(await hashToken(`client-log:${ipHash || "unknown"}`), 10 * 60 * 1000, 60);
+    await recordLogSafely({
+      level: "error",
+      source: "browser",
+      event: input.event,
+      requestId: requestIdFrom(request),
+      method,
+      route: routeFromUrl(input.url, request),
+      ipHash,
+      details: {
+        message: input.message,
+        stack: input.stack,
+        line: input.line,
+        column: input.column,
+        ...input.details
+      }
+    });
+    return empty();
   }
 
   if (method === "POST" && path.join("/") === "auth/register") {
@@ -276,8 +312,30 @@ const handleRequest = async (request: Request, path: string[]) => {
         provider: provider.name,
         model: provider.model
       });
+      await recordLogSafely({
+        level: "info",
+        source: "ai",
+        event: "ai.reply_generated",
+        requestId: requestIdFrom(request),
+        method,
+        route: "/api/conversations/:conversationId/messages",
+        actorId: user.id,
+        details: { conversationId, provider: provider.name, model: provider.model },
+        content: { question: input.question, reply: generated.reply, conversation: context }
+      });
       return json({ ...messages, usageLimit: config.aiDailyLimit }, 201);
     } catch (error) {
+      await recordLogSafely({
+        level: "error",
+        source: "ai",
+        event: "ai.reply_failed",
+        requestId: requestIdFrom(request),
+        method,
+        route: "/api/conversations/:conversationId/messages",
+        actorId: user.id,
+        details: { conversationId, provider: provider.name, model: provider.model, error: errorDetails(error) },
+        content: { question: input.question, conversation: context }
+      });
       await releaseUsage(user.id).catch((releaseError) => console.error(releaseError));
       throw error;
     }
@@ -287,9 +345,38 @@ const handleRequest = async (request: Request, path: string[]) => {
 };
 
 export const handleApi = async (request: Request, path: string[]) => {
+  const startedAt = Date.now();
+  const requestId = crypto.randomUUID();
+  const route = `/api/${path.join("/")}`;
   try {
-    return await handleRequest(request, path);
+    const response = await handleRequest(request, path);
+    await recordLogSafely({
+      level: response.status >= 400 ? "warn" : "info",
+      source: "api",
+      event: "http.request",
+      requestId,
+      method: request.method,
+      route,
+      status: response.status,
+      durationMs: Date.now() - startedAt,
+      ipHash: await hashIp(request),
+      details: { cfRay: request.headers.get("cf-ray"), userAgent: request.headers.get("user-agent") }
+    });
+    return response;
   } catch (error) {
+    const status = error instanceof ApiError ? error.status : error instanceof ZodError || error instanceof SyntaxError ? 400 : 500;
+    await recordLogSafely({
+      level: status >= 500 ? "error" : "warn",
+      source: "api",
+      event: "api.request_failed",
+      requestId,
+      method: request.method,
+      route,
+      status,
+      durationMs: Date.now() - startedAt,
+      ipHash: await hashIp(request),
+      details: errorDetails(error)
+    });
     return errorResponse(error);
   }
 };

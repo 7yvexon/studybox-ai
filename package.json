@@ -19,7 +19,8 @@
     "db:migrate": "npm run db:migrate --workspace=@studybox/api",
     "db:generate": "drizzle-kit generate",
     "db:local:migrate": "wrangler d1 migrations apply DB --local --persist-to .wrangler/state --config scripts/sites-local.wrangler.jsonc",
-    "invite:create": "npm run invite:create --workspace=@studybox/api --"
+    "invite:create": "npm run invite:create --workspace=@studybox/api --",
+    "logs": "node ./scripts/logs.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

@@ -5,12 +5,14 @@ import { BrowserRouter } from "react-router-dom";
 
 import { App } from "../apps/web/src/App";
 import { AuthProvider } from "../apps/web/src/auth";
+import { initClientTelemetry } from "../apps/web/src/telemetry";
 
 export const StudyBoxClient = () => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    initClientTelemetry();
   }, []);
 
   if (!mounted) {

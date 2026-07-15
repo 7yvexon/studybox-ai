@@ -34,4 +34,14 @@ export const conversationSchema = z.object({
 
 export const titleSchema = z.object({ title: z.string().trim().min(1).max(120) });
 export const messageSchema = z.object({ question: z.string().trim().min(1).max(2000), settings: learningSettingsSchema });
+
+export const clientLogSchema = z.object({
+  event: z.enum(["browser.error", "browser.unhandled_rejection", "browser.api_failure"]),
+  message: z.string().trim().min(1).max(4000),
+  stack: z.string().max(12000).optional(),
+  url: z.string().max(2048).optional(),
+  line: z.number().int().min(0).max(1000000).optional(),
+  column: z.number().int().min(0).max(1000000).optional(),
+  details: z.record(z.string().max(1000)).optional()
+});
 export const uuidSchema = z.string().uuid();

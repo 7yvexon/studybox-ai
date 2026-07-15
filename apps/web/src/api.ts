@@ -1,5 +1,7 @@
 import type { Conversation, CurrentUser, LearningSettings, Message } from "@studybox/shared";
 
+import { reportClientEvent } from "./telemetry";
+
 export class ApiClientError extends Error {
   constructor(
     message: string,
@@ -19,22 +21,39 @@ const request = async <T>(path: string, options: RequestInit = {}): Promise<T> =
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(path, {
-    ...options,
-    headers,
-    credentials: "include",
-    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
-  });
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...options,
+      headers,
+      credentials: "include",
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS)
+    });
+  } catch (error) {
+    reportClientEvent({
+      event: "browser.api_failure",
+      message: error instanceof Error ? error.message : "네트워크 요청에 실패했습니다.",
+      stack: error instanceof Error ? error.stack : undefined,
+      details: { method: options.method || "GET", path, kind: "network" }
+    });
+    throw error;
+  }
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as
       | { error?: { code?: string; message?: string } }
       | null;
-    throw new ApiClientError(
+    const error = new ApiClientError(
       payload?.error?.message || "요청을 처리하지 못했습니다.",
       response.status,
       payload?.error?.code || "REQUEST_FAILED"
     );
+    reportClientEvent({
+      event: "browser.api_failure",
+      message: error.message,
+      details: { method: options.method || "GET", path, status: String(error.status), code: error.code }
+    });
+    throw error;
   }
 
   if (response.status === 204) {

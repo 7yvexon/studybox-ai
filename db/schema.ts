@@ -78,3 +78,29 @@ export const rateLimits = sqliteTable("rate_limits", {
   windowStartedAt: integer("window_started_at").notNull(),
   requestCount: integer("request_count").notNull()
 });
+
+export const observabilityLogs = sqliteTable(
+  "observability_logs",
+  {
+    id: text("id").primaryKey(),
+    occurredAt: text("occurred_at").notNull(),
+    level: text("level").notNull(),
+    source: text("source").notNull(),
+    event: text("event").notNull(),
+    requestId: text("request_id"),
+    method: text("method"),
+    route: text("route"),
+    status: integer("status"),
+    durationMs: integer("duration_ms"),
+    actorId: text("actor_id"),
+    ipHash: text("ip_hash"),
+    details: text("details"),
+    content: text("content")
+  },
+  (table) => [
+    index("observability_logs_occurred_at_idx").on(table.occurredAt),
+    index("observability_logs_level_occurred_at_idx").on(table.level, table.occurredAt),
+    index("observability_logs_request_id_idx").on(table.requestId, table.occurredAt),
+    index("observability_logs_event_occurred_at_idx").on(table.event, table.occurredAt)
+  ]
+);

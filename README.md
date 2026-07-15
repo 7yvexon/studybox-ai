@@ -165,6 +165,17 @@ AI 키는 저장소나 `wrangler.jsonc`에 넣지 않고 Cloudflare Secret으로
 npx wrangler secret put AI_API_KEY
 ```
 
+### 운영 로그 조회
+
+Worker는 HTTP 요청, API 오류, D1·AI 처리 실패, 브라우저 JavaScript 오류를 D1에 구조화해 1년간 보관합니다. 학습 질문과 AI 응답은 상세 로그에 포함되므로, 기본 조회에서는 숨기고 필요한 경우에만 `--include-content`를 사용합니다. 조회하는 컴퓨터는 해당 Cloudflare 계정에 로그인되어 있어야 합니다.
+
+```powershell
+npm run logs -- --since 24h --level error
+npm run logs -- --event ai.reply_failed --since 7d
+npm run logs -- --request-id <X-Request-Id 값>
+npm run logs -- --since 1h --include-content
+```
+
 ## 백업과 복구
 
 설치한 `studybox-backup.timer`가 매일 03:15에 `DATABASE_URL`을 사용해 백업을 만듭니다. 타이머 상태와 실행 결과는 다음 명령으로 확인합니다.
