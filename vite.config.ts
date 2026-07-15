@@ -22,6 +22,10 @@ export default defineConfig(async () => {
   process.env.MINIFLARE_REGISTRY_PATH ??= ".wrangler/registry";
 
   const { cloudflare } = await import("@cloudflare/vite-plugin");
+  const cloudflareOptions =
+    process.env.STUDYBOX_DEPLOY_TARGET === "cloudflare"
+      ? { configPath: "./wrangler.jsonc" }
+      : { config: localBindingConfig };
 
   return {
     publicDir: "apps/web/public",
@@ -30,7 +34,7 @@ export default defineConfig(async () => {
       sites(),
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
-        config: localBindingConfig
+        ...cloudflareOptions
       })
     ]
   };

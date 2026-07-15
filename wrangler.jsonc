@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "studybox-ai",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "studybox.syura-service.xyz",
+      "custom_domain": true
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "studybox-ai-prod",
+      "database_id": "cf57d2b7-20a5-4279-a438-435018966460",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  "vars": {
+    "AI_PROVIDER": "openai-compatible",
+    "AI_DAILY_LIMIT": "50",
+    "AI_BASE_URL": "https://openrouter.ai/api/v1",
+    "AI_MODEL": "qwen/qwen3-next-80b-a3b-instruct:free",
+    "AI_FALLBACK_MODELS": "google/gemma-4-31b-it:free,openai/gpt-oss-20b:free,qwen/qwen3.5-flash-02-23,deepseek/deepseek-v3.2",
+    "AI_TIMEOUT_MS": "30000",
+    "SESSION_COOKIE_NAME": "studybox_session",
+    "SESSION_TTL_DAYS": "7"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

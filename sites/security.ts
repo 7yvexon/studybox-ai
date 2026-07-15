@@ -1,5 +1,5 @@
 const encoder = new TextEncoder();
-const passwordIterations = 120000;
+const passwordIterations = 100000;
 
 const toBase64Url = (bytes: Uint8Array) => {
   let binary = "";
