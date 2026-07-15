@@ -3,6 +3,9 @@ AGENTS.md
 StudyBox AI 실행.bat
 node_modules/
 dist/
+.next/
+.wrangler/
+tsconfig.tsbuildinfo
 coverage/
 .env
 .env.*

@@ -3,7 +3,6 @@ import { ArrowRight, ArrowUp, BookOpenText, ChatCircleDots, Plus } from "@phosph
 import { defaultLearningSettings } from "@studybox/shared";
 
 import { useAuth } from "./auth";
-import "./deep-landing.css";
 
 const DeepBrand = () => (
   <span className="deep-brand">

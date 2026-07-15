@@ -2,12 +2,19 @@
 
 StudyBox AI는 질문의 맥락, 학생의 답변 수준, 학습 목적에 맞춰 설명 방식을 바꾸는 학습 서비스 MVP입니다. 공개 소개 화면, 가입·로그인, 대화 기록이 남는 학습 작업 공간을 하나의 저장소에서 제공합니다. 기본 AI 제공자는 `mock`이므로 API 키나 로컬 데이터베이스 없이도 사용자 흐름을 검증할 수 있습니다.
 
+기본 개발·빌드 경로는 Codex Sites 호환 Vinext 앱입니다. 브라우저 화면은 React로 유지하고, API는 Cloudflare Worker 호환 방식으로 실행하며 사용자·세션·대화 데이터는 D1에 저장합니다. 기존 Express·PostgreSQL VPS 구성도 별도 명령으로 유지합니다.
+
 ## 구성
 
 ```text
 apps/
 ├─ api/                 Express API, 인증, 메모리/PostgreSQL 저장소, AI 어댑터
 └─ web/                 React + Vite 사용자 화면
+app/                    Sites 페이지와 API 라우트
+sites/                  Worker 호환 API, D1 저장소, 인증, AI 어댑터
+db/                     D1 스키마
+drizzle/                Sites가 적용하는 D1 마이그레이션
+worker/                 Sites Worker 진입점
 packages/
 └─ shared/              공통 학습 설정·대화 타입
 infra/
@@ -29,16 +36,29 @@ infra/
 
 ## 빠른 시작
 
-Node.js 20.18 이상이 필요합니다. 빠른 로컬 체험은 기본적으로 메모리 저장소를 사용하므로 서버를 다시 시작하면 계정과 대화가 초기화됩니다.
+Node.js 22.13 이상이 필요합니다. 기본 명령은 로컬 D1 마이그레이션을 적용한 뒤 Sites 호환 개발 서버를 시작하며, 계정과 대화는 `.wrangler` 아래의 로컬 데이터베이스에 유지됩니다.
 
 ```powershell
 npm ci
 npm run dev
 ```
 
-웹은 `http://localhost:5173`, API는 `http://127.0.0.1:3001`에서 실행됩니다.
+웹과 API는 `http://localhost:5173`에서 같은 출처로 실행됩니다. Sites 배포용 빌드는 다음 명령으로 검증합니다.
 
-PostgreSQL을 사용하려면 `.env.example`을 `.env`로 복사하고 `STORAGE_MODE=postgres`, `DATABASE_URL`을 설정한 뒤 다음 명령을 실행합니다.
+```powershell
+npm run build
+```
+
+빌드 결과에는 Worker 진입점, 정적 자산, Sites 호스팅 설정, D1 마이그레이션이 함께 포함됩니다.
+
+기존 VPS용 Express·PostgreSQL 구성을 실행하거나 빌드하려면 다음 명령을 사용합니다.
+
+```powershell
+npm run dev:vps
+npm run build:vps
+```
+
+VPS 구성에서 PostgreSQL을 사용하려면 `.env.example`을 `.env`로 복사하고 `STORAGE_MODE=postgres`, `DATABASE_URL`을 설정한 뒤 다음 명령을 실행합니다.
 
 ```powershell
 npm run db:migrate
