@@ -23,8 +23,8 @@
     "AI_PROVIDER": "openai-compatible",
     "AI_DAILY_LIMIT": "50",
     "AI_BASE_URL": "https://openrouter.ai/api/v1",
-    "AI_MODEL": "qwen/qwen3-next-80b-a3b-instruct:free",
-    "AI_FALLBACK_MODELS": "google/gemma-4-31b-it:free,openai/gpt-oss-20b:free,qwen/qwen3.5-flash-02-23,deepseek/deepseek-v3.2",
+    "AI_MODEL": "deepseek/deepseek-v4-flash",
+    "AI_FALLBACK_MODELS": "openai/gpt-oss-20b:free,qwen/qwen3.5-flash-02-23,deepseek/deepseek-v3.2",
     "AI_TIMEOUT_MS": "30000",
     "SESSION_COOKIE_NAME": "studybox_session",
     "SESSION_TTL_DAYS": "7"
